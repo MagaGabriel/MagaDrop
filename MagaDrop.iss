@@ -1,6 +1,6 @@
 [Setup]
 AppName=MagaDrop
-AppVersion=1.0
+AppVersion=2.0.0
 DefaultDirName={pf}\MagaDrop
 DefaultGroupName=MagaDrop
 OutputDir=output
@@ -10,6 +10,7 @@ SetupIconFile=file.ico
 [Files]
 Source: "MagaDrop.exe"; DestDir: "{app}"
 Source: "file.ico"; DestDir: "{app}"
+Source: "THIRD_PARTY_LICENSES.md"; DestDir: "{app}"
 Source: "jre\*"; DestDir: "{app}\jre"; Flags: recursesubdirs
 Source: "web\*"; DestDir: "{app}\web"; Flags: recursesubdirs
 

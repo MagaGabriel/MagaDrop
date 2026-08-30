@@ -15,12 +15,11 @@ drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add(
 drop.addEventListener("dragleave", () => drop.classList.remove("dragging"));
 drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("dragging"); enviarArquivos([...e.dataTransfer.files]); });
 input.addEventListener("change", () => { enviarArquivos([...input.files]); input.value = ""; });
-codigo.addEventListener("input", () => { codigo.value = codigo.value.replace(/\D/g, "").slice(0, 6); });
 
 async function enviarArquivos(arquivos) {
   if (!arquivos.length) return;
-  if (!/^\d{6}$/.test(codigo.value)) {
-    statusEl.textContent = "Digite o código de 6 dígitos exibido no computador."; statusEl.className = "status error"; codigo.focus(); return;
+  if (!/^[A-Za-z0-9@#._-]{4,32}$/.test(codigo.value)) {
+    statusEl.textContent = "Digite a senha criada no aplicativo do computador."; statusEl.className = "status error"; codigo.focus(); return;
   }
   statusEl.textContent = `Enviando ${arquivos.length} arquivo(s)...`; statusEl.className = "status sending";
   const resultados = await Promise.all(arquivos.map(enviar));

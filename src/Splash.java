@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Splash extends JFrame {
+    private static final long serialVersionUID = 1L;
     public Splash() {
         setTitle("MagaDrop"); setSize(400, 220); setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLayout(new GridBagLayout());

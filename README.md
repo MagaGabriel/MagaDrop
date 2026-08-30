@@ -6,17 +6,17 @@ Aplicativo Windows para receber arquivos de celulares e outros dispositivos cone
 
 1. Abra o MagaDrop no computador e aguarde o servidor iniciar.
 2. No celular, conectado à mesma rede Wi-Fi, leia o QR code ou abra o endereço exibido.
-3. Digite no navegador o código de seis dígitos mostrado na janela do computador.
+3. Digite no navegador a senha de acesso criada no aplicativo do computador.
 4. Selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
 5. Use **Abrir pasta** para acessar os arquivos recebidos.
 
-Os uploads ficam em `%LOCALAPPDATA%\MagaDrop\uploads` (ou na pasta pessoal se `LOCALAPPDATA` não existir).
+Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pasta pode ser alterada depois na janela principal.
 
 ## Segurança
 
-- Cada execução gera um novo código de acesso de seis dígitos.
+- A senha de acesso é criada pelo usuário e permanece salva nas preferências locais do Windows até ser alterada.
 - Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
-- O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta `8080` à internet.
+- O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
 
 ## Desenvolvimento
 

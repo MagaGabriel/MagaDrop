@@ -1,0 +1,400 @@
+MAGADROP
+Apresentação e documentação geral
+Versão 1.0.0
+Data do registro: 30 de agosto de 2026
+
+======================================================================
+1. APRESENTAÇÃO
+======================================================================
+
+O MagaDrop é um aplicativo para Windows criado para facilitar a transferência
+de arquivos entre dispositivos conectados à mesma rede local.
+
+Com ele, um computador funciona como receptor de arquivos. Celulares, tablets
+ou outros computadores podem acessar uma página pelo navegador e enviar fotos,
+documentos, vídeos e outros arquivos diretamente para o computador em que o
+MagaDrop está sendo executado.
+
+A transferência ocorre diretamente pela rede local. Não é necessário enviar os
+arquivos para serviços de nuvem, criar uma conta ou instalar um aplicativo no
+celular.
+
+
+======================================================================
+2. PRINCIPAIS RECURSOS
+======================================================================
+
+- Transferência de arquivos pela rede Wi-Fi local.
+- Acesso pelo navegador do celular, tablet ou computador.
+- QR code para abrir rapidamente o endereço do MagaDrop.
+- QR code disponível mesmo quando não há acesso à internet.
+- Seleção de vários arquivos ao mesmo tempo.
+- Suporte a arrastar e soltar arquivos na página.
+- Barra de progresso individual para cada upload.
+- Interface web responsiva para computadores e celulares.
+- Código temporário de acesso com seis dígitos.
+- Novo código de acesso sempre que o MagaDrop é fechado e aberto novamente.
+- Limite de 2 GB por arquivo.
+- Preservação de arquivos com nomes repetidos.
+- Proteção contra caminhos e nomes de arquivo maliciosos.
+- Identificação automática do endereço IP da rede local.
+- Interface desktop com controles para iniciar e parar o servidor.
+- Botões para abrir o navegador e a pasta de arquivos recebidos.
+- Registro dos acessos, uploads e erros na janela principal.
+- Ícone disponível na bandeja do Windows.
+- Instalador Windows com o Java necessário incluído.
+
+
+======================================================================
+3. COMO O MAGADROP FUNCIONA
+======================================================================
+
+Ao ser aberto, o MagaDrop identifica o endereço IPv4 do computador e inicia um
+servidor HTTP local na porta 8080.
+
+Exemplo de endereço apresentado pelo programa:
+
+http://192.168.0.10:8080
+
+Outros dispositivos conectados à mesma rede podem abrir esse endereço em um
+navegador. A página apresenta a área de envio, o código de acesso e o progresso
+dos arquivos.
+
+Fluxo simplificado:
+
+1. O MagaDrop é aberto no computador.
+2. O servidor local é iniciado na porta 8080.
+3. Um código temporário de seis dígitos é gerado.
+4. O usuário acessa o endereço ou lê o QR code com o celular.
+5. O usuário informa o código exibido na janela do computador.
+6. O navegador envia os arquivos para o endpoint /upload.
+7. O servidor valida o código, o tamanho e o nome do arquivo.
+8. O arquivo é gravado na pasta de uploads do usuário.
+
+Arquitetura simplificada:
+
+Celular, tablet ou navegador
+            |
+            | HTTP na rede local - porta 8080
+            |
+            v
+Servidor Java do MagaDrop
+            |
+            +-- /          Interface web
+            +-- /upload    Recebimento de arquivos
+            |
+            v
+Pasta de arquivos recebidos
+
+
+======================================================================
+4. INSTALAÇÃO E DISTRIBUIÇÃO
+======================================================================
+
+O arquivo que deve ser compartilhado com outros usuários é:
+
+MagaDropSetup.exe
+
+Esse instalador contém:
+
+- O executável do MagaDrop.
+- A interface web.
+- O Java Runtime Environment necessário.
+- O ícone do programa.
+- Atalhos do menu Iniciar e da área de trabalho.
+- O desinstalador do Windows.
+
+Durante a primeira execução, o Windows Firewall pode pedir autorização. O
+usuário deve permitir o MagaDrop em redes privadas. Não é necessário autorizar
+o programa em redes públicas.
+
+O aplicativo ainda não possui assinatura digital. Por esse motivo, o Windows
+SmartScreen pode exibir um aviso de editor desconhecido. Quando o arquivo tiver
+sido recebido de uma fonte confiável, o usuário poderá selecionar:
+
+Mais informações -> Executar assim mesmo
+
+
+======================================================================
+5. COMO USAR
+======================================================================
+
+No computador receptor:
+
+1. Instale e abra o MagaDrop.
+2. Aguarde a mensagem informando que o servidor foi iniciado.
+3. Observe o endereço e o código de acesso exibidos.
+4. Mantenha o MagaDrop aberto durante a transferência.
+
+No celular ou outro dispositivo:
+
+1. Conecte o dispositivo à mesma rede Wi-Fi do computador.
+2. Leia o QR code ou digite o endereço mostrado pelo MagaDrop.
+3. Digite o código de acesso de seis dígitos.
+4. Toque na área de envio e escolha os arquivos.
+5. Aguarde a confirmação de conclusão.
+
+Para localizar os arquivos recebidos, use o botão "Abrir pasta" na janela do
+MagaDrop.
+
+
+======================================================================
+6. LOCAL DOS ARQUIVOS RECEBIDOS
+======================================================================
+
+Os arquivos recebidos são armazenados em:
+
+%LOCALAPPDATA%\MagaDrop\uploads
+
+Normalmente, o caminho corresponde a algo semelhante a:
+
+C:\Users\NomeDoUsuario\AppData\Local\MagaDrop\uploads
+
+Essa pasta foi escolhida porque usuários comuns do Windows possuem permissão de
+escrita nela. Versões anteriores usavam a pasta de instalação, localizada em
+Program Files, onde poderiam ocorrer erros de permissão.
+
+Ao iniciar, a versão atual procura arquivos da pasta antiga de uploads e os
+copia para o novo local sem apagar os originais.
+
+
+======================================================================
+7. CÓDIGO DE ACESSO
+======================================================================
+
+O MagaDrop gera um código numérico aleatório de seis dígitos a cada execução.
+
+- Fechar e abrir o MagaDrop gera um código novo.
+- Parar e iniciar o servidor sem fechar o aplicativo mantém o mesmo código.
+- Um código de uma execução anterior não funciona na nova execução.
+- O servidor rejeita uploads quando o código está ausente ou incorreto.
+
+O código reduz o risco de uploads não autorizados por outras pessoas conectadas
+à mesma rede.
+
+
+======================================================================
+8. TRATAMENTO DOS ARQUIVOS
+======================================================================
+
+Antes de aceitar um arquivo, o servidor verifica:
+
+- Se a requisição utiliza o método POST.
+- Se o código de acesso está correto.
+- Se o nome do arquivo foi informado.
+- Se o nome não contém barras ou caminhos de diretórios.
+- Se o nome não contém caracteres de controle.
+- Se o tamanho não ultrapassa 2 GB.
+- Se o destino final continua dentro da pasta de uploads.
+
+O MagaDrop não substitui silenciosamente arquivos existentes. Quando um arquivo
+com o mesmo nome já está presente, o novo arquivo recebe um sufixo.
+
+Exemplo:
+
+foto.jpg
+foto (1).jpg
+foto (2).jpg
+
+
+======================================================================
+9. SEGURANÇA E PRIVACIDADE
+======================================================================
+
+Medidas implementadas:
+
+- Código temporário de acesso.
+- Validação de nomes de arquivo.
+- Bloqueio de travessia de diretórios.
+- Limite de tamanho por arquivo.
+- Restrições de métodos HTTP.
+- Cabeçalhos de segurança para a interface web.
+- Política de conteúdo que limita scripts e recursos à própria aplicação.
+- QR code armazenado localmente, sem dependência de uma CDN externa.
+- Arquivos enviados diretamente para o computador receptor.
+
+Limitações importantes:
+
+- O tráfego utiliza HTTP e não possui criptografia TLS/HTTPS.
+- O MagaDrop deve ser utilizado somente em redes locais confiáveis.
+- A porta 8080 não deve ser redirecionada ou exposta diretamente à internet.
+- Um código de seis dígitos é adequado para uso local temporário, mas não
+  substitui uma autenticação completa para exposição pública.
+- O instalador ainda não possui assinatura digital.
+
+
+======================================================================
+10. SOLUÇÃO DE PROBLEMAS
+======================================================================
+
+Se o celular não conseguir abrir o endereço:
+
+- Confirme que celular e computador estão na mesma rede Wi-Fi.
+- Permita o MagaDrop no Firewall do Windows para redes privadas.
+- Desative temporariamente VPNs que possam alterar a rota de rede.
+- Verifique se o roteador possui isolamento de clientes ou dispositivos.
+- Digite manualmente o endereço exibido na janela do programa.
+- Confirme que outro programa não está utilizando a porta 8080.
+
+Se o upload for rejeitado:
+
+- Verifique se o código de seis dígitos foi digitado corretamente.
+- Confirme que o arquivo possui menos de 2 GB.
+- Evite nomes de arquivo com caracteres incomuns ou caminhos completos.
+- Confirme que o servidor continua iniciado.
+
+
+======================================================================
+11. TECNOLOGIAS E ESTRUTURA DO PROJETO
+======================================================================
+
+Tecnologias utilizadas:
+
+- Java 25.
+- Java Swing para a interface desktop.
+- HttpServer do JDK para o servidor HTTP.
+- HTML, CSS e JavaScript para a interface web.
+- XMLHttpRequest para upload e acompanhamento do progresso.
+- QRCode.js 1.0.0 para geração local do QR code.
+- PowerShell para automação da compilação e dos testes.
+- Inno Setup para geração do instalador Windows.
+
+Estrutura principal:
+
+src/
+  MagaDrop.java             Servidor, uploads e interface principal
+  Splash.java               Tela de inicialização
+
+web/
+  index.html                Estrutura da página
+  style.css                 Aparência e responsividade
+  script.js                 Seleção e envio dos arquivos
+  qrcode.min.js             Geração offline do QR code
+
+tests/
+  MagaDropSmokeTest.java    Teste integrado do servidor
+
+launcher/
+  MagaDropLauncher.bin      Launcher utilizado para gerar o executável
+
+build.ps1                   Script de compilação e teste
+MagaDrop.iss                Configuração do instalador
+README.md                   Documentação resumida do projeto
+THIRD_PARTY_LICENSES.md     Licenças de componentes externos
+
+
+======================================================================
+12. COMPILAÇÃO E TESTES
+======================================================================
+
+Para compilar e executar os testes, abra o PowerShell na pasta do projeto e
+execute:
+
+.\build.ps1 -Test
+
+O processo:
+
+1. Compila os arquivos Java.
+2. Gera o arquivo MagaDrop.jar.
+3. Gera o novo MagaDrop.exe usando o launcher.
+4. Compila o teste integrado.
+5. Inicia um servidor temporário somente na interface local.
+6. Executa os testes e encerra o servidor.
+
+Testes implementados:
+
+- Carregamento da página principal com resposta HTTP 200.
+- Rejeição de upload sem código de acesso.
+- Aceitação de upload com código válido.
+- Verificação do conteúdo salvo.
+- Preservação de arquivos com nomes duplicados.
+- Bloqueio de tentativas de travessia de diretórios.
+
+O executável também foi validado por uma inicialização controlada, confirmando
+que a nova interface foi servida corretamente. O processo e o servidor de teste
+foram encerrados ao final da validação.
+
+
+======================================================================
+13. CONTROLE DE VERSÃO E GITHUB
+======================================================================
+
+O projeto está armazenado em um repositório privado no GitHub:
+
+https://github.com/MagaGabriel/MagaDrop
+
+Primeira versão registrada:
+
+- Versão: v1.0.0
+- Branch principal: main
+- Commit: 7e894a516f7bc7ed43dd0d286b6e4d4b681c4d03
+- Mensagem: Versão inicial v1.0.0
+
+Página da versão:
+
+https://github.com/MagaGabriel/MagaDrop/releases/tag/v1.0.0
+
+Instalador da versão:
+
+https://github.com/MagaGabriel/MagaDrop/releases/download/v1.0.0/MagaDropSetup.exe
+
+SHA-256 do instalador:
+
+a477c5caa706bf605db9d448f824bb129dfb6a68d60596f37ba20a6eff6f4181
+
+Como o repositório é privado, somente o proprietário e colaboradores
+autorizados podem acessar o código e baixar a versão.
+
+O histórico Git contém apenas código-fonte, documentação, interface e arquivos
+necessários para o desenvolvimento. JRE, uploads, desinstaladores, executáveis e
+outros artefatos gerados são ignorados. O instalador é distribuído por meio da
+Release do GitHub.
+
+
+======================================================================
+14. ESTADO ATUAL DA VERSÃO 1.0.0
+======================================================================
+
+A versão 1.0.0 representa a primeira versão funcional e registrada do
+MagaDrop. Ela permite instalar o programa no Windows, iniciar o servidor local,
+acessar a interface por QR code, autenticar o envio e transferir arquivos para
+o computador.
+
+Esta versão serve como base estável para as próximas melhorias. Alterações
+futuras podem ser desenvolvidas sem perder o estado atual, pois o código, a tag
+e o instalador da versão 1.0.0 estão preservados no GitHub.
+
+
+======================================================================
+15. POSSÍVEIS MELHORIAS FUTURAS
+======================================================================
+
+- Assinatura digital do instalador.
+- HTTPS local ou criptografia adicional para as transferências.
+- Exibição e download de arquivos do computador pelo navegador.
+- Confirmação manual no computador antes de aceitar um upload.
+- Histórico visual de transferências.
+- Botão para excluir ou organizar arquivos recebidos.
+- Escolha personalizada da pasta de destino.
+- Limites configuráveis de tamanho e tipos de arquivo.
+- Código de acesso com tempo de expiração configurável.
+- Notificações do Windows ao receber arquivos.
+- Inicialização automática com o Windows.
+- Atualização automática ou aviso de novas versões.
+- Melhorias visuais na interface desktop.
+- Testes automatizados adicionais para concorrência e arquivos grandes.
+- Configuração automática ou orientação mais detalhada para o Firewall.
+
+
+======================================================================
+16. RESUMO
+======================================================================
+
+O MagaDrop oferece uma forma simples e direta de transferir arquivos para um
+computador Windows usando apenas a rede local e um navegador. O projeto possui
+interface desktop, página responsiva, QR code offline, código temporário de
+acesso, validações de segurança, instalador próprio, testes automatizados e
+controle de versão no GitHub.
+
+A versão 1.0.0 está salva como o primeiro marco funcional do aplicativo e pode
+ser utilizada como ponto de partida para todas as próximas evoluções.

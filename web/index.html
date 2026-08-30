@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MagaDrop</title><link rel="stylesheet" href="/style.css">
+  <script src="/qrcode.min.js" defer></script><script src="/script.js" defer></script>
+</head><body><main class="layout">
+  <section class="card upload-card">
+    <div class="brand"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Envie arquivos para este computador</p></div></div>
+    <label for="access-code">Código exibido no computador</label>
+    <input id="access-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+    <div id="drop" class="drop" role="button" tabindex="0" aria-label="Escolher arquivos">
+      <span class="drop-icon">↑</span><strong>Arraste os arquivos aqui</strong><span>ou clique para escolher</span>
+    </div>
+    <input id="files" type="file" multiple hidden><div id="lista" class="file-list" aria-live="polite"></div>
+    <div id="status" class="status" aria-live="polite">Pronto para receber</div>
+  </section>
+  <aside class="card connect-card"><h2>Acesse pelo celular</h2><p>Use a mesma rede Wi-Fi e leia o QR code.</p>
+    <div id="qrcode" class="qr" aria-label="QR code do endereço"></div><a id="link" class="link" href="/"></a>
+    <p class="privacy">Os arquivos são enviados diretamente para este computador.</p>
+  </aside>
+</main></body></html>

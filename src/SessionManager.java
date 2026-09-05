@@ -57,6 +57,11 @@ final class SessionManager {
         return sessions.size();
     }
 
+    int countForUser(String userId) {
+        cleanup();
+        return (int)sessions.values().stream().filter(session -> session.userId.equals(userId)).count();
+    }
+
     private void cleanup() {
         long now = System.currentTimeMillis();
         sessions.entrySet().removeIf(entry -> {

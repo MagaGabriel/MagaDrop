@@ -69,6 +69,19 @@ final class UserStore {
         catch (IOException e) { byUsername.put(current.username(), current); throw e; }
     }
 
+    synchronized UserAccount setEnabled(String username, boolean enabled) throws IOException {
+        UserAccount current = find(username).orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+        if (current.role() == UserRole.ADMIN && !enabled)
+            throw new IllegalArgumentException("A conta administradora principal não pode ser desativada.");
+        if (current.enabled() == enabled) return current;
+        UserAccount updated = new UserAccount(current.id(), current.username(), current.displayName(), current.passwordHash(),
+                current.role(), enabled, current.createdAtEpochMillis());
+        byUsername.put(updated.username(), updated);
+        try { save(); }
+        catch (IOException e) { byUsername.put(current.username(), current); throw e; }
+        return updated;
+    }
+
     synchronized UserAccount initialAdmin() {
         return byUsername.values().stream().filter(u -> u.role() == UserRole.ADMIN).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Nenhum administrador foi configurado."));

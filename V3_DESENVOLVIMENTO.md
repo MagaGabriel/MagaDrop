@@ -35,14 +35,30 @@ Na primeira abertura da versão 3:
 
 Se for uma instalação nova, a configuração inicial exige uma senha ou frase-senha entre 10 e 128 caracteres.
 
+## Marco 2: administração de usuários
+
+Implementado:
+
+- botão **Usuários** no aplicativo Windows;
+- tabela local com perfil, estado e quantidade de sessões;
+- criação de contas de membro;
+- redefinição segura da senha de membros;
+- ativação e desativação de contas;
+- encerramento remoto das sessões de um membro;
+- área **Minha conta** para cada pessoa trocar a própria senha;
+- área **Usuários** no navegador, visível somente para administradores;
+- nova autenticação do administrador antes de cada ação sensível;
+- revogação automática de sessões após troca de senha ou desativação;
+- testes que comprovam que membros não acessam a administração.
+
+Senhas atuais e hashes nunca são enviados pela API. O administrador pode somente definir uma nova senha.
+
 ## Próximo marco
 
-1. Tela local de administração de usuários.
-2. Criação da conta de membro pelo administrador.
-3. Raízes de armazenamento `Pessoal` e `Compartilhados`.
-4. Permissões verificadas no servidor em todas as operações.
-5. Listagem de arquivos e criação segura de pastas.
-6. Download por identificador interno, sem expor caminhos do Windows.
+1. Raízes de armazenamento `Pessoal` e `Compartilhados`.
+2. Permissões verificadas no servidor em todas as operações.
+3. Listagem de arquivos e criação segura de pastas.
+4. Download por identificador interno, sem expor caminhos do Windows.
 
 Excluir arquivos continuará desabilitado até existir lixeira, registro de auditoria e testes de recuperação.
 

@@ -25,7 +25,7 @@ Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pas
 - Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
 - O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
 
-As próximas entregas da versão 3 são administração de usuários, pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
+A versão 3 já inclui administração de usuários no aplicativo Windows e no navegador: criação de membros, redefinição de senha, ativação, desativação, encerramento de sessões e troca da própria senha. As próximas entregas são pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
 
 ## Desenvolvimento
 

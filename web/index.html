@@ -15,15 +15,78 @@
     </form>
     <div id="login-status" class="status" aria-live="polite">Use a conta configurada no computador.</div>
   </section>
-  <section id="app-card" class="card upload-card" hidden>
-    <div class="brand"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Envie arquivos para este computador</p></div></div>
+
+  <section id="app-card" class="card app-card" hidden>
+    <div class="brand compact"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Servidor de arquivos da família</p></div></div>
     <div class="user-strip"><div><strong id="display-name"></strong><span id="user-role"></span></div><button id="logout" class="secondary" type="button">Sair</button></div>
-    <div id="drop" class="drop" role="button" tabindex="0" aria-label="Escolher arquivos">
-      <span class="drop-icon">↑</span><strong>Arraste os arquivos aqui</strong><span>ou clique para escolher</span>
-    </div>
-    <input id="files" type="file" multiple hidden><div id="lista" class="file-list" aria-live="polite"></div>
-    <div id="status" class="status" aria-live="polite">Pronto para receber</div>
+    <nav class="app-nav" aria-label="Áreas do MagaDrop">
+      <button class="nav-button active" type="button" data-view="upload-view">Enviar</button>
+      <button class="nav-button" type="button" data-view="account-view">Minha conta</button>
+      <button id="admin-nav" class="nav-button" type="button" data-view="admin-view" hidden>Usuários</button>
+    </nav>
+
+    <section id="upload-view" class="view">
+      <div id="drop" class="drop" role="button" tabindex="0" aria-label="Escolher arquivos">
+        <span class="drop-icon">↑</span><strong>Arraste os arquivos aqui</strong><span>ou clique para escolher</span>
+      </div>
+      <input id="files" type="file" multiple hidden><div id="lista" class="file-list" aria-live="polite"></div>
+      <div id="status" class="status" aria-live="polite">Pronto para receber</div>
+    </section>
+
+    <section id="account-view" class="view" hidden>
+      <div class="section-heading"><h2>Minha conta</h2><p>Altere sua senha. Todas as sessões anteriores serão encerradas.</p></div>
+      <form id="account-password-form" class="form-panel">
+        <label for="current-password">Senha atual</label>
+        <input id="current-password" type="password" autocomplete="current-password" maxlength="128" required>
+        <label for="new-password">Nova senha</label>
+        <input id="new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        <label for="confirm-new-password">Confirmar nova senha</label>
+        <input id="confirm-new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        <button class="primary" type="submit">Alterar minha senha</button>
+      </form>
+      <div id="account-status" class="status" aria-live="polite"></div>
+    </section>
+
+    <section id="admin-view" class="view" hidden>
+      <div class="section-heading"><h2>Usuários</h2><p>Crie membros e controle o acesso ao MagaDrop.</p></div>
+      <div id="users-list" class="users-list" aria-live="polite"></div>
+
+      <details class="admin-create">
+        <summary>Criar novo membro</summary>
+        <form id="create-user-form" class="form-panel">
+          <label for="create-username">Nome de usuário</label>
+          <input id="create-username" type="text" autocomplete="off" minlength="3" maxlength="32" required>
+          <label for="create-display-name">Nome de exibição</label>
+          <input id="create-display-name" type="text" autocomplete="off" maxlength="80" required>
+          <label for="create-password">Senha inicial</label>
+          <input id="create-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+          <label for="create-confirm-password">Confirmar senha</label>
+          <input id="create-confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+          <label for="create-admin-password">Sua senha de administrador</label>
+          <input id="create-admin-password" type="password" autocomplete="current-password" maxlength="128" required>
+          <button class="primary" type="submit">Criar membro</button>
+        </form>
+        <div id="create-user-status" class="status" aria-live="polite"></div>
+      </details>
+
+      <section id="admin-action-panel" class="action-panel" hidden>
+        <h3 id="admin-action-title"></h3><p id="admin-action-description"></p>
+        <form id="admin-action-form" class="form-panel">
+          <div id="action-new-password-fields" hidden>
+            <label for="action-new-password">Nova senha</label>
+            <input id="action-new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128">
+            <label for="action-confirm-password">Confirmar nova senha</label>
+            <input id="action-confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128">
+          </div>
+          <label for="action-admin-password">Sua senha de administrador</label>
+          <input id="action-admin-password" type="password" autocomplete="current-password" maxlength="128" required>
+          <div class="action-buttons"><button class="primary danger-aware" type="submit">Confirmar</button><button id="cancel-admin-action" class="secondary" type="button">Cancelar</button></div>
+        </form>
+        <div id="admin-action-status" class="status" aria-live="polite"></div>
+      </section>
+    </section>
   </section>
+
   <aside class="card connect-card"><h2>Acesse pelo celular</h2><p>Use a mesma rede Wi-Fi e leia o QR code.</p>
     <div id="qrcode" class="qr" aria-label="QR code do endereço"></div><a id="link" class="link" href="/"></a>
     <p class="privacy">Contas e arquivos permanecem neste computador. A versão atual ainda não deve ser exposta à internet.</p>

@@ -1,5 +1,6 @@
 import com.sun.net.httpserver.*;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.*;
 import java.net.*;
@@ -218,9 +219,10 @@ public class MagaDrop {
         JPanel painel = new JPanel(new BorderLayout(8, 6)); painel.setBorder(BorderFactory.createTitledBorder("Pasta de destino"));
         pastaLabel = new JLabel(pastaUploads.toString()); pastaLabel.setToolTipText(pastaUploads.toString());
         JPanel acoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        JButton alterar = new JButton("Alterar pasta"), abrir = new JButton("Abrir pasta"), configuracoes = new JButton("Configurações");
-        alterar.addActionListener(e -> alterarPasta()); abrir.addActionListener(e -> abrirPasta()); configuracoes.addActionListener(e -> mostrarConfiguracoes());
-        acoes.add(alterar); acoes.add(abrir); acoes.add(configuracoes);
+        JButton usuariosButton = new JButton("Usuários"), alterar = new JButton("Alterar pasta"), abrir = new JButton("Abrir pasta"), configuracoes = new JButton("Configurações");
+        usuariosButton.addActionListener(e -> mostrarUsuarios()); alterar.addActionListener(e -> alterarPasta());
+        abrir.addActionListener(e -> abrirPasta()); configuracoes.addActionListener(e -> mostrarConfiguracoes());
+        acoes.add(usuariosButton); acoes.add(alterar); acoes.add(abrir); acoes.add(configuracoes);
         painel.add(pastaLabel, BorderLayout.CENTER); painel.add(acoes, BorderLayout.EAST); return painel;
     }
 
@@ -234,6 +236,8 @@ public class MagaDrop {
         try {
             descobrirEndereco(); server = criarServidorEmPorta(PORTA_PREFERIDA); porta = server.getAddress().getPort();
             server.createContext("/api/session", new AuthHandler(usuarios, sessoes, tentativasLogin));
+            server.createContext("/api/account/password", new AccountPasswordHandler(usuarios, sessoes, tentativasLogin));
+            server.createContext("/api/users", new UserAdminHandler(usuarios, sessoes, tentativasLogin));
             server.createContext("/upload", new UploadHandler()); server.createContext("/", new PaginaHandler());
             int threads = Math.max(4, Math.min(12, Runtime.getRuntime().availableProcessors() * 2));
             servidorExecutor = Executors.newFixedThreadPool(threads, r -> { Thread t = new Thread(r, "magadrop-http"); t.setDaemon(true); return t; });
@@ -316,6 +320,127 @@ public class MagaDrop {
                 JOptionPane.showMessageDialog(janela, "Não foi possível alterar a inicialização do Windows:\n" + e.getMessage(), "MagaDrop", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    static void mostrarUsuarios() {
+        JDialog dialogo = new JDialog(janela, "Usuários do MagaDrop", true);
+        DefaultTableModel modelo = new DefaultTableModel(new Object[]{"Usuário", "Nome", "Perfil", "Estado", "Sessões"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        };
+        JTable tabela = new JTable(modelo); tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION); tabela.setFillsViewportHeight(true);
+        Runnable atualizar = () -> {
+            String selecionado = tabela.getSelectedRow() >= 0 ? String.valueOf(tabela.getValueAt(tabela.getSelectedRow(), 0)) : null;
+            modelo.setRowCount(0);
+            for (UserAccount conta : usuarios.list()) modelo.addRow(new Object[]{conta.username(), conta.displayName(),
+                    conta.role() == UserRole.ADMIN ? "Administrador" : "Membro", conta.enabled() ? "Ativa" : "Desativada",
+                    sessoes.countForUser(conta.id())});
+            if (selecionado != null) for (int i = 0; i < modelo.getRowCount(); i++)
+                if (selecionado.equals(modelo.getValueAt(i, 0))) { tabela.setRowSelectionInterval(i, i); break; }
+        };
+        JButton criar = new JButton("Criar membro"), redefinir = new JButton("Redefinir senha");
+        JButton alternar = new JButton("Ativar/desativar"), encerrar = new JButton("Encerrar sessões"), fechar = new JButton("Fechar");
+        criar.addActionListener(e -> criarMembroDesktop(dialogo, atualizar));
+        redefinir.addActionListener(e -> redefinirSenhaDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
+        alternar.addActionListener(e -> alternarUsuarioDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
+        encerrar.addActionListener(e -> encerrarSessoesDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
+        fechar.addActionListener(e -> dialogo.dispose());
+        JPanel acoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        acoes.add(criar); acoes.add(redefinir); acoes.add(alternar); acoes.add(encerrar); acoes.add(fechar);
+        JPanel conteudo = new JPanel(new BorderLayout(8, 8)); conteudo.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        conteudo.add(new JScrollPane(tabela), BorderLayout.CENTER); conteudo.add(acoes, BorderLayout.SOUTH);
+        dialogo.setContentPane(conteudo); dialogo.setSize(760, 380); dialogo.setMinimumSize(new Dimension(680, 330));
+        dialogo.setLocationRelativeTo(janela); atualizar.run(); dialogo.setVisible(true);
+    }
+
+    static UserAccount usuarioSelecionado(JTable tabela) {
+        int linha = tabela.getSelectedRow();
+        if (linha < 0) {
+            JOptionPane.showMessageDialog(tabela, "Selecione um usuário primeiro.", "Usuários", JOptionPane.INFORMATION_MESSAGE);
+            return null;
+        }
+        return usuarios.find(String.valueOf(tabela.getValueAt(linha, 0))).orElse(null);
+    }
+
+    static void criarMembroDesktop(Component parent, Runnable atualizar) {
+        JTextField usuario = new JTextField(18), nome = new JTextField(18);
+        JPasswordField senha = new JPasswordField(18), confirmar = new JPasswordField(18), senhaAdmin = new JPasswordField(18);
+        JPanel painel = formulario(new String[]{"Nome de usuário:", "Nome de exibição:", "Senha inicial:", "Confirmar senha:", "Sua senha de administrador:"},
+                new JComponent[]{usuario, nome, senha, confirmar, senhaAdmin});
+        if (JOptionPane.showConfirmDialog(parent, painel, "Criar membro", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            String nova = new String(senha.getPassword());
+            if (!nova.equals(new String(confirmar.getPassword()))) throw new IllegalArgumentException("As senhas não são iguais.");
+            verificarAdministrador(new String(senhaAdmin.getPassword()));
+            UserAccount criada = usuarios.createMember(usuario.getText(), nome.getText(), nova);
+            atualizar.run(); log("Usuário criado no computador: " + criada.username());
+        } catch (Exception e) { mostrarErroUsuario(parent, e); }
+    }
+
+    static void redefinirSenhaDesktop(Component parent, UserAccount conta, Runnable atualizar) {
+        if (conta == null) return;
+        if (conta.role() == UserRole.ADMIN) {
+            JOptionPane.showMessageDialog(parent, "Altere a senha do administrador em Configurações.", "Usuários", JOptionPane.INFORMATION_MESSAGE); return;
+        }
+        JPasswordField senha = new JPasswordField(18), confirmar = new JPasswordField(18), senhaAdmin = new JPasswordField(18);
+        JPanel painel = formulario(new String[]{"Nova senha para " + conta.username() + ":", "Confirmar senha:", "Sua senha de administrador:"},
+                new JComponent[]{senha, confirmar, senhaAdmin});
+        if (JOptionPane.showConfirmDialog(parent, painel, "Redefinir senha", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            String nova = new String(senha.getPassword());
+            if (!nova.equals(new String(confirmar.getPassword()))) throw new IllegalArgumentException("As senhas não são iguais.");
+            verificarAdministrador(new String(senhaAdmin.getPassword()));
+            usuarios.changePassword(conta.username(), nova); sessoes.invalidateAllForUser(conta.id());
+            atualizar.run(); log("Senha redefinida no computador para " + conta.username());
+        } catch (Exception e) { mostrarErroUsuario(parent, e); }
+    }
+
+    static void alternarUsuarioDesktop(Component parent, UserAccount conta, Runnable atualizar) {
+        if (conta == null) return;
+        if (conta.role() == UserRole.ADMIN) {
+            JOptionPane.showMessageDialog(parent, "A conta administradora principal não pode ser desativada.", "Usuários", JOptionPane.INFORMATION_MESSAGE); return;
+        }
+        String acao = conta.enabled() ? "desativar" : "ativar";
+        JPasswordField senhaAdmin = new JPasswordField(18);
+        JPanel painel = formulario(new String[]{"Confirme que deseja " + acao + " @" + conta.username() + ".", "Sua senha de administrador:"},
+                new JComponent[]{new JLabel("As sessões serão encerradas."), senhaAdmin});
+        if (JOptionPane.showConfirmDialog(parent, painel, Character.toUpperCase(acao.charAt(0)) + acao.substring(1) + " usuário",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            verificarAdministrador(new String(senhaAdmin.getPassword()));
+            UserAccount alterada = usuarios.setEnabled(conta.username(), !conta.enabled());
+            if (!alterada.enabled()) sessoes.invalidateAllForUser(conta.id());
+            atualizar.run(); log("Usuário " + conta.username() + (alterada.enabled() ? " ativado" : " desativado"));
+        } catch (Exception e) { mostrarErroUsuario(parent, e); }
+    }
+
+    static void encerrarSessoesDesktop(Component parent, UserAccount conta, Runnable atualizar) {
+        if (conta == null) return;
+        if (conta.role() == UserRole.ADMIN) {
+            JOptionPane.showMessageDialog(parent, "Use Sair no navegador para encerrar a sessão do administrador.", "Usuários", JOptionPane.INFORMATION_MESSAGE); return;
+        }
+        JPasswordField senhaAdmin = new JPasswordField(18);
+        JPanel painel = formulario(new String[]{"Encerrar todas as sessões de @" + conta.username() + "?", "Sua senha de administrador:"},
+                new JComponent[]{new JLabel("O usuário precisará entrar novamente."), senhaAdmin});
+        if (JOptionPane.showConfirmDialog(parent, painel, "Encerrar sessões", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            verificarAdministrador(new String(senhaAdmin.getPassword())); sessoes.invalidateAllForUser(conta.id());
+            atualizar.run(); log("Sessões encerradas no computador para " + conta.username());
+        } catch (Exception e) { mostrarErroUsuario(parent, e); }
+    }
+
+    static JPanel formulario(String[] labels, JComponent[] campos) {
+        JPanel painel = new JPanel(new GridLayout(0, 2, 8, 8));
+        for (int i = 0; i < labels.length; i++) { painel.add(new JLabel(labels[i])); painel.add(campos[i]); }
+        return painel;
+    }
+
+    static void verificarAdministrador(String senha) {
+        UserAccount admin = usuarios.initialAdmin();
+        if (usuarios.authenticate(admin.username(), senha).isEmpty()) throw new IllegalArgumentException("Senha do administrador incorreta.");
+    }
+
+    static void mostrarErroUsuario(Component parent, Exception e) {
+        JOptionPane.showMessageDialog(parent, e.getMessage(), "Não foi possível concluir", JOptionPane.WARNING_MESSAGE);
     }
 
     static void alterarSenha() {

@@ -21,6 +21,8 @@ public class MagaDropPreviewServer {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/api/session", new AuthHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/account/password", new AccountPasswordHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/users", new UserAdminHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/upload", new MagaDrop.UploadHandler());
         server.createContext("/", new MagaDrop.PaginaHandler());
         server.setExecutor(Executors.newFixedThreadPool(4));

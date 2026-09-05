@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,6 +76,10 @@ public class MagaDropSmokeTest {
         try { MagaDrop.usuarios.createMember("membro", "Membro", "1234"); }
         catch (IllegalArgumentException e) { weakPasswordRejected = true; }
         check(weakPasswordRejected, "senha fraca de novo membro rejeitada");
+        boolean adminDisableRejected = false;
+        try { MagaDrop.usuarios.setEnabled("admin", false); }
+        catch (IllegalArgumentException e) { adminDisableRejected = true; }
+        check(adminDisableRejected, "administrador principal não pode ser desativado");
     }
 
     private static void testSessions() {
@@ -99,6 +105,8 @@ public class MagaDropSmokeTest {
     private static void testHttpFlow(Path temporary) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/api/session", new AuthHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/account/password", new AccountPasswordHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/users", new UserAdminHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/upload", new MagaDrop.UploadHandler());
         server.createContext("/", new MagaDrop.PaginaHandler());
         server.setExecutor(Executors.newCachedThreadPool(runnable -> {
@@ -124,6 +132,8 @@ public class MagaDropSmokeTest {
             check(validLogin.headers().firstValue("Set-Cookie").orElseThrow().contains("HttpOnly"), "cookie HttpOnly");
             check(validLogin.headers().firstValue("Set-Cookie").orElseThrow().contains("SameSite=Strict"), "cookie SameSite estrito");
 
+            testUserAdministration(client, base, cookie, csrf);
+
             check(upload(client, base, "teste.txt", cookie, null).statusCode() == 403, "upload sem CSRF rejeitado");
             check(upload(client, base, "teste.txt", cookie, csrf).statusCode() == 201, "upload autenticado aceito");
             check(upload(client, base, "teste.txt", cookie, csrf).statusCode() == 201, "nome duplicado preservado");
@@ -138,6 +148,81 @@ public class MagaDropSmokeTest {
             server.stop(0);
         }
     }
+
+    private static void testUserAdministration(HttpClient client, URI base, String adminCookie, String adminCsrf) throws Exception {
+        HttpRequest adminList = HttpRequest.newBuilder(base.resolve("/api/users")).header("Cookie", adminCookie).GET().build();
+        HttpResponse<String> usersResponse = client.send(adminList, HttpResponse.BodyHandlers.ofString());
+        check(usersResponse.statusCode() == 200 && usersResponse.body().contains("\"username\":\"esposa\""), "administrador lista usuários");
+        check(!usersResponse.body().contains("passwordHash") && !usersResponse.body().contains(PASSWORD), "API não expõe hashes ou senhas");
+
+        LoginSession member = loginSession(client, base, "esposa", "Outra frase senha 456!");
+        HttpRequest memberList = HttpRequest.newBuilder(base.resolve("/api/users")).header("Cookie", member.cookie()).GET().build();
+        check(client.send(memberList, HttpResponse.BodyHandlers.ofString()).statusCode() == 403, "membro não acessa administração");
+
+        Map<String, String> create = action("create", "filho");
+        create.put("displayName", "Filho"); create.put("password", "Senha inicial do filho 789!");
+        check(postForm(client, base.resolve("/api/users"), adminCookie, "csrf-inválido", create).statusCode() == 403,
+                "ação administrativa sem CSRF rejeitada");
+        check(adminAction(client, base, adminCookie, adminCsrf, create).statusCode() == 201, "administrador cria membro");
+        check(MagaDrop.usuarios.authenticate("filho", "Senha inicial do filho 789!").isPresent(), "novo membro pode autenticar");
+
+        Map<String, String> reset = action("reset-password", "esposa"); reset.put("password", "Senha redefinida 987!");
+        check(adminAction(client, base, adminCookie, adminCsrf, reset).statusCode() == 200, "administrador redefine senha");
+        check(upload(client, base, "revogada.txt", member.cookie(), member.csrf()).statusCode() == 401, "redefinição encerra sessão do membro");
+        member = loginSession(client, base, "esposa", "Senha redefinida 987!");
+
+        Map<String, String> disable = action("set-enabled", "esposa"); disable.put("enabled", "false");
+        check(adminAction(client, base, adminCookie, adminCsrf, disable).statusCode() == 200, "administrador desativa membro");
+        check(upload(client, base, "desativada.txt", member.cookie(), member.csrf()).statusCode() == 401, "desativação encerra sessão");
+        check(login(client, base, "esposa", "Senha redefinida 987!").statusCode() == 401, "conta desativada não entra");
+
+        Map<String, String> enable = action("set-enabled", "esposa"); enable.put("enabled", "true");
+        check(adminAction(client, base, adminCookie, adminCsrf, enable).statusCode() == 200, "administrador reativa membro");
+        member = loginSession(client, base, "esposa", "Senha redefinida 987!");
+
+        Map<String, String> revoke = action("revoke-sessions", "esposa");
+        check(adminAction(client, base, adminCookie, adminCsrf, revoke).statusCode() == 200, "administrador encerra sessões");
+        check(upload(client, base, "sessao-encerrada.txt", member.cookie(), member.csrf()).statusCode() == 401, "sessão encerrada deixa de funcionar");
+        member = loginSession(client, base, "esposa", "Senha redefinida 987!");
+
+        Map<String, String> ownPassword = new LinkedHashMap<>();
+        ownPassword.put("currentPassword", "Senha redefinida 987!"); ownPassword.put("newPassword", "Senha escolhida pela esposa 654!");
+        HttpResponse<String> changed = postForm(client, base.resolve("/api/account/password"), member.cookie(), member.csrf(), ownPassword);
+        check(changed.statusCode() == 204, "membro altera a própria senha");
+        check(upload(client, base, "senha-alterada.txt", member.cookie(), member.csrf()).statusCode() == 401, "troca da própria senha encerra sessões");
+        check(login(client, base, "esposa", "Senha escolhida pela esposa 654!").statusCode() == 200, "nova senha do membro funciona");
+    }
+
+    private static Map<String, String> action(String action, String username) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("action", action); values.put("username", username); values.put("currentPassword", PASSWORD);
+        return values;
+    }
+
+    private static HttpResponse<String> adminAction(HttpClient client, URI base, String cookie, String csrf, Map<String, String> values) throws Exception {
+        return postForm(client, base.resolve("/api/users"), cookie, csrf, values);
+    }
+
+    private static HttpResponse<String> postForm(HttpClient client, URI uri, String cookie, String csrf, Map<String, String> values) throws Exception {
+        StringBuilder body = new StringBuilder();
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (!body.isEmpty()) body.append('&');
+            body.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)).append('=')
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+        }
+        HttpRequest request = HttpRequest.newBuilder(uri).header("Cookie", cookie).header("X-CSRF-Token", csrf)
+                .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString())).build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static LoginSession loginSession(HttpClient client, URI base, String username, String password) throws Exception {
+        HttpResponse<String> response = login(client, base, username, password);
+        check(response.statusCode() == 200, "login de " + username);
+        return new LoginSession(response.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0], jsonField(response.body(), "csrfToken"));
+    }
+
+    private record LoginSession(String cookie, String csrf) {}
 
     private static HttpResponse<String> login(HttpClient client, URI base, String username, String password) throws Exception {
         String form = "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)

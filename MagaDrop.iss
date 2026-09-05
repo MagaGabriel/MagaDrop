@@ -1,22 +1,35 @@
 [Setup]
+AppId={{2D94447B-C613-46E8-AE35-23DA76DE965B}
 AppName=MagaDrop
-AppVersion=2.0.0
-DefaultDirName={pf}\MagaDrop
-DefaultGroupName=MagaDrop
+AppVersion=3.0.0-preview.1
+AppVerName=MagaDrop 3 Preview
+AppPublisher=MagaDrop
+VersionInfoVersion=3.0.0.1
+VersionInfoProductVersion=3.0.0.1
+DefaultDirName={localappdata}\Programs\MagaDrop
+DefaultGroupName=MagaDrop 3 Preview
+PrivilegesRequired=lowest
+DisableProgramGroupPage=yes
+WizardStyle=modern
+Compression=lzma2
+SolidCompression=yes
 OutputDir=output
-OutputBaseFilename=MagaDropSetup
+OutputBaseFilename=MagaDropSetup-v3-preview
 SetupIconFile=file.ico
 
 [Files]
-Source: "MagaDrop.exe"; DestDir: "{app}"
-Source: "file.ico"; DestDir: "{app}"
-Source: "THIRD_PARTY_LICENSES.md"; DestDir: "{app}"
-Source: "jre\*"; DestDir: "{app}\jre"; Flags: recursesubdirs
-Source: "web\*"; DestDir: "{app}\web"; Flags: recursesubdirs
+Source: "MagaDrop.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "file.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "THIRD_PARTY_LICENSES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "jre\*"; DestDir: "{app}\jre"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Tasks]
+Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"; Flags: checkedonce
 
 [Icons]
-Name: "{group}\MagaDrop"; Filename: "{app}\MagaDrop.exe"
-Name: "{commondesktop}\MagaDrop"; Filename: "{app}\MagaDrop.exe"
+Name: "{autoprograms}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\MagaDrop.exe"; Description: "Abrir MagaDrop"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Description: "Abrir MagaDrop 3 Preview"; Flags: nowait postinstall skipifsilent

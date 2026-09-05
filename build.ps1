@@ -1,4 +1,4 @@
-param([switch]$Test)
+param([switch]$Test, [switch]$Installer)
 $ErrorActionPreference = 'Stop'
 $root=$PSScriptRoot; $src=Join-Path $root 'src'; $jar=Join-Path $root 'MagaDrop.jar'
 $exe=Join-Path $root 'MagaDrop.exe'; $stub=Join-Path $root 'launcher\MagaDropLauncher.bin'
@@ -22,3 +22,14 @@ if($Test){
   }finally{Remove-Item -LiteralPath $testOut -Recurse -Force}
 }
 Write-Host 'Build concluído:' $exe
+if($Installer){
+  $isccCandidates=@(
+    (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+    (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe')
+  )
+  $iscc=$isccCandidates|Where-Object{$_ -and (Test-Path -LiteralPath $_)}|Select-Object -First 1
+  if(-not $iscc){throw 'Inno Setup 6 não encontrado.'}
+  & $iscc (Join-Path $root 'MagaDrop.iss')
+  if($LASTEXITCODE -ne 0){throw 'Falha ao gerar o instalador.'}
+  Write-Host 'Instalador concluído:' (Join-Path $root 'output\MagaDropSetup-v3-preview.exe')
+}

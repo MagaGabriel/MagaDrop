@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.prefs.Preferences;
 
 public class MagaDrop {
+    private static final String VERSAO = "3.0.0-preview.1";
     private static final int PORTA_PREFERIDA = 8080;
     private static final long LIMITE_UPLOAD = 2L * 1024 * 1024 * 1024;
     private static final String CHAVE_PASTA = "pastaUploads";
@@ -155,13 +156,14 @@ public class MagaDrop {
     }
 
     static void criarInterface() {
-        janela = new JFrame("MagaDrop"); janela.setSize(820, 620); janela.setMinimumSize(new Dimension(720, 560));
+        janela = new JFrame("MagaDrop 3 Preview"); janela.setSize(820, 620); janela.setMinimumSize(new Dimension(720, 560));
         janela.setLocationRelativeTo(null); janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.setLayout(new BorderLayout(12, 12));
 
         JPanel cabecalho = new JPanel(new BorderLayout());
         cabecalho.setBorder(BorderFactory.createEmptyBorder(16, 18, 0, 18));
-        JLabel titulo = new JLabel("MagaDrop"); titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        JLabel titulo = new JLabel("MagaDrop 3 Preview"); titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        titulo.setToolTipText("Versão " + VERSAO);
         statusLabel = new JLabel("Iniciando..."); statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         cabecalho.add(titulo, BorderLayout.WEST); cabecalho.add(statusLabel, BorderLayout.EAST);
         janela.add(cabecalho, BorderLayout.NORTH);

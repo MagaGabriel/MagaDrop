@@ -34,9 +34,12 @@ Requisitos: JDK 25 ou compatível e PowerShell 7.
 ```powershell
 .\build.ps1
 .\build.ps1 -Test
+.\build.ps1 -Test -Installer
 ```
 
-O script compila as classes, recria `MagaDrop.jar` e atualiza o executável usando `launcher\MagaDropLauncher.bin`. Para gerar o instalador, compile `MagaDrop.iss` no Inno Setup.
+O script compila as classes, recria `MagaDrop.jar` e atualiza o executável usando `launcher\MagaDropLauncher.bin`. Com `-Installer`, ele também gera `output\MagaDropSetup-v3-preview.exe` usando o Inno Setup 6.
+
+O instalador da prévia usa o nome **MagaDrop 3 Preview**, uma pasta própria em `%LOCALAPPDATA%\Programs\MagaDrop` e atalhos próprios. Isso impede que uma instalação antiga abra por engano e preserva as contas em `%LOCALAPPDATA%\MagaDrop`.
 
 - `src/`: servidor HTTP e interface Java Swing.
 - `web/`: interface responsiva servida aos dispositivos.

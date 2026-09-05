@@ -5,7 +5,6 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.security.MessageDigest;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -22,15 +21,18 @@ public class MagaDrop {
     static JTextArea logArea;
     static HttpServer server;
     static ExecutorService servidorExecutor;
-    static String ip = "localhost", senhaAcesso, baseDir;
+    static String ip = "localhost", baseDir;
     static int porta = PORTA_PREFERIDA;
-    static Path pastaUploads, pastaWeb;
+    static Path pastaUploads, pastaWeb, pastaDados;
+    static UserStore usuarios;
+    static SessionManager sessoes;
+    static LoginRateLimiter tentativasLogin;
+    static char[] senhaConfiguracaoInicial;
     static boolean rodando;
     static JFrame janela;
-    static JLabel statusLabel, enderecoLabel, senhaLabel, pastaLabel;
-    static JButton iniciarButton, pararButton, mostrarSenhaButton;
+    static JLabel statusLabel, enderecoLabel, usuarioLabel, pastaLabel;
+    static JButton iniciarButton, pararButton;
     static QrPanel qrPanel;
-    static boolean senhaVisivel;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -53,16 +55,31 @@ public class MagaDrop {
 
     static boolean prepararConfiguracao() {
         pastaWeb = Paths.get(baseDir, "web").toAbsolutePath().normalize();
+        pastaDados = pastaDados();
         Path padrao = pastaPadrao();
         String salva = PREFERENCIAS.get(CHAVE_PASTA, "");
         try { pastaUploads = salva.isBlank() ? padrao : Paths.get(salva).toAbsolutePath().normalize(); }
         catch (InvalidPathException e) { pastaUploads = padrao; }
-        senhaAcesso = PREFERENCIAS.get(CHAVE_SENHA, "");
-        if (senhaAcesso.isBlank() && !mostrarConfiguracaoInicial()) {
-            System.exit(0);
-            return false;
+        String senhaLegada = PREFERENCIAS.get(CHAVE_SENHA, "");
+        try {
+            usuarios = new UserStore(pastaDados.resolve("users.properties"));
+            if (usuarios.isEmpty() && senhaLegada.isBlank()) {
+                if (!mostrarConfiguracaoInicial()) { System.exit(0); return false; }
+                senhaLegada = new String(senhaConfiguracaoInicial);
+            }
+            validarPastaDestino(pastaUploads);
+            migrarUploadsLegados();
+            if (usuarios.isEmpty()) {
+                usuarios.createInitialAdmin("admin", "Administrador", senhaLegada);
+                PREFERENCIAS.remove(CHAVE_SENHA);
+            } else if (!senhaLegada.isBlank()) {
+                PREFERENCIAS.remove(CHAVE_SENHA);
+            }
+            if (senhaConfiguracaoInicial != null) Arrays.fill(senhaConfiguracaoInicial, '\0');
+            senhaConfiguracaoInicial = null;
+            sessoes = new SessionManager();
+            tentativasLogin = new LoginRateLimiter();
         }
-        try { validarPastaDestino(pastaUploads); migrarUploadsLegados(); }
         catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Não foi possível preparar as pastas:\n" + e.getMessage(),
                     "MagaDrop", JOptionPane.ERROR_MESSAGE); System.exit(1); return false;
@@ -70,11 +87,15 @@ public class MagaDrop {
         return true;
     }
 
-    static Path pastaPadrao() {
+    static Path pastaDados() {
         String local = System.getenv("LOCALAPPDATA");
-        Path dados = local == null || local.isBlank()
-                ? Paths.get(System.getProperty("user.home"), "MagaDrop") : Paths.get(local, "MagaDrop");
-        return dados.resolve("uploads").toAbsolutePath().normalize();
+        return (local == null || local.isBlank()
+                ? Paths.get(System.getProperty("user.home"), "MagaDrop") : Paths.get(local, "MagaDrop"))
+                .toAbsolutePath().normalize();
+    }
+
+    static Path pastaPadrao() {
+        return pastaDados().resolve("uploads").toAbsolutePath().normalize();
     }
 
     static boolean mostrarConfiguracaoInicial() {
@@ -89,14 +110,14 @@ public class MagaDrop {
         JPanel painel = new JPanel(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(4, 4, 10, 4);
-        painel.add(new JLabel("Configure o MagaDrop para começar"), c);
+        painel.add(new JLabel("Configure o administrador do MagaDrop"), c);
         c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Salvar arquivos em:"), c);
         c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(pastaPainel, c);
-        c.gridx = 0; c.gridy++; c.weightx = 0; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Crie uma senha:"), c);
+        c.gridx = 0; c.gridy++; c.weightx = 0; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Senha do administrador:"), c);
         c.gridx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(campoSenha, c);
         c.gridx = 0; c.gridy++; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Confirme a senha:"), c);
         c.gridx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(confirmarSenha, c);
-        c.gridx = 1; c.gridy++; painel.add(new JLabel("4 a 32 caracteres: letras, números, @ # . _ ou -"), c);
+        c.gridx = 1; c.gridy++; painel.add(new JLabel("Use uma senha ou frase-senha de 10 a 128 caracteres"), c);
         c.gridy++; painel.add(iniciarWindows, c);
 
         while (true) {
@@ -107,11 +128,11 @@ public class MagaDrop {
             String confirmacao = new String(confirmarSenha.getPassword());
             try {
                 if (!senha.equals(confirmacao)) throw new IllegalArgumentException("As senhas não são iguais.");
-                validarSenha(senha);
+                PasswordHasher.validateNewPassword(senha);
                 Path pasta = Paths.get(campoPasta.getText().trim()).toAbsolutePath().normalize();
                 validarPastaDestino(pasta);
                 if (iniciarWindows.isSelected()) configurarInicioWindows(true);
-                pastaUploads = pasta; senhaAcesso = senha;
+                pastaUploads = pasta; senhaConfiguracaoInicial = senha.toCharArray();
                 salvarPreferencias();
                 return true;
             } catch (Exception e) {
@@ -171,15 +192,11 @@ public class MagaDrop {
         painel.add(enderecoLabel); painel.add(Box.createVerticalStrut(6));
         JButton copiarEndereco = new JButton("Copiar endereço"); copiarEndereco.setAlignmentX(Component.LEFT_ALIGNMENT);
         copiarEndereco.addActionListener(e -> copiarTexto(enderecoServidor(), "Endereço copiado")); painel.add(copiarEndereco);
-        painel.add(Box.createVerticalStrut(22)); painel.add(rotuloSecao("Senha de acesso"));
-        senhaLabel = new JLabel(); senhaLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 22)); senhaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        painel.add(senhaLabel); painel.add(Box.createVerticalStrut(6));
-        JPanel senhaAcoes = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0)); senhaAcoes.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mostrarSenhaButton = new JButton("Mostrar"); JButton copiarSenha = new JButton("Copiar senha");
-        mostrarSenhaButton.addActionListener(e -> { senhaVisivel = !senhaVisivel; atualizarSenhaExibida(); });
-        copiarSenha.addActionListener(e -> copiarTexto(senhaAcesso, "Senha copiada"));
-        senhaAcoes.add(mostrarSenhaButton); senhaAcoes.add(Box.createHorizontalStrut(6)); senhaAcoes.add(copiarSenha);
-        senhaAcoes.setMaximumSize(new Dimension(Integer.MAX_VALUE, senhaAcoes.getPreferredSize().height)); painel.add(senhaAcoes);
+        painel.add(Box.createVerticalStrut(22)); painel.add(rotuloSecao("Conta administradora"));
+        usuarioLabel = new JLabel(); usuarioLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20)); usuarioLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        painel.add(usuarioLabel); painel.add(Box.createVerticalStrut(6));
+        JLabel avisoSenha = new JLabel("A senha é protegida e nunca é exibida.");
+        avisoSenha.setForeground(new Color(90, 90, 90)); avisoSenha.setAlignmentX(Component.LEFT_ALIGNMENT); painel.add(avisoSenha);
         painel.add(Box.createVerticalGlue());
         JPanel controles = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0)); controles.setAlignmentX(Component.LEFT_ALIGNMENT);
         iniciarButton = new JButton("Iniciar"); pararButton = new JButton("Parar"); JButton navegador = new JButton("Abrir no navegador");
@@ -216,6 +233,7 @@ public class MagaDrop {
         if (rodando) { log("Servidor já está rodando"); return; }
         try {
             descobrirEndereco(); server = criarServidorEmPorta(PORTA_PREFERIDA); porta = server.getAddress().getPort();
+            server.createContext("/api/session", new AuthHandler(usuarios, sessoes, tentativasLogin));
             server.createContext("/upload", new UploadHandler()); server.createContext("/", new PaginaHandler());
             int threads = Math.max(4, Math.min(12, Runtime.getRuntime().availableProcessors() * 2));
             servidorExecutor = Executors.newFixedThreadPool(threads, r -> { Thread t = new Thread(r, "magadrop-http"); t.setDaemon(true); return t; });
@@ -277,7 +295,7 @@ public class MagaDrop {
 
     static void mostrarConfiguracoes() {
         JCheckBox iniciarWindows = new JCheckBox("Iniciar o MagaDrop junto com o Windows", PREFERENCIAS.getBoolean(CHAVE_INICIAR_WINDOWS, false));
-        JButton alterarSenha = new JButton("Alterar senha de acesso"); JButton restaurarPasta = new JButton("Restaurar pasta padrão");
+        JButton alterarSenha = new JButton("Alterar senha do administrador"); JButton restaurarPasta = new JButton("Restaurar pasta padrão");
         alterarSenha.addActionListener(e -> alterarSenha());
         restaurarPasta.addActionListener(e -> {
             try {
@@ -308,9 +326,12 @@ public class MagaDrop {
             String nova = new String(senha.getPassword());
             try {
                 if (!nova.equals(new String(confirmacao.getPassword()))) throw new IllegalArgumentException("As senhas não são iguais.");
-                validarSenha(nova); senhaAcesso = nova; PREFERENCIAS.put(CHAVE_SENHA, nova); senhaVisivel = false; atualizarInterface();
-                log("Senha de acesso alterada"); return;
-            } catch (IllegalArgumentException e) {
+                PasswordHasher.validateNewPassword(nova);
+                UserAccount admin = usuarios.initialAdmin();
+                usuarios.changePassword(admin.username(), nova);
+                sessoes.invalidateAllForUser(admin.id());
+                log("Senha do administrador alterada; sessões anteriores foram encerradas"); return;
+            } catch (IllegalArgumentException | IOException e) {
                 JOptionPane.showMessageDialog(janela, e.getMessage(), "Revise a senha", JOptionPane.WARNING_MESSAGE);
                 senha.setText(""); confirmacao.setText("");
             }
@@ -318,8 +339,7 @@ public class MagaDrop {
     }
 
     static void validarSenha(String senha) {
-        if (senha == null || !senha.matches("[A-Za-z0-9@#._-]{4,32}"))
-            throw new IllegalArgumentException("Use de 4 a 32 caracteres: letras, números, @ # . _ ou -.");
+        PasswordHasher.validateNewPassword(senha);
     }
 
     static void validarPastaDestino(Path pasta) throws IOException {
@@ -330,7 +350,7 @@ public class MagaDrop {
     }
 
     static void salvarPreferencias() {
-        PREFERENCIAS.put(CHAVE_PASTA, pastaUploads.toString()); PREFERENCIAS.put(CHAVE_SENHA, senhaAcesso);
+        PREFERENCIAS.put(CHAVE_PASTA, pastaUploads.toString());
     }
 
     static void configurarInicioWindows(boolean ativar) throws IOException, InterruptedException {
@@ -362,14 +382,9 @@ public class MagaDrop {
         statusLabel.setText(rodando ? "● Pronto para receber" : "● Servidor parado");
         statusLabel.setForeground(rodando ? new Color(22, 130, 72) : new Color(170, 55, 55));
         enderecoLabel.setText(enderecoServidor()); pastaLabel.setText(pastaUploads.toString()); pastaLabel.setToolTipText(pastaUploads.toString());
-        iniciarButton.setEnabled(!rodando); pararButton.setEnabled(rodando); atualizarSenhaExibida();
+        iniciarButton.setEnabled(!rodando); pararButton.setEnabled(rodando);
+        if (usuarioLabel != null && usuarios != null) usuarioLabel.setText(usuarios.initialAdmin().username() + "  •  administrador");
         qrPanel.setConteudo(rodando ? enderecoServidor() : null);
-    }
-
-    static void atualizarSenhaExibida() {
-        if (senhaLabel == null) return;
-        senhaLabel.setText(senhaVisivel ? senhaAcesso : "•".repeat(Math.min(senhaAcesso.length(), 16)));
-        mostrarSenhaButton.setText(senhaVisivel ? "Ocultar" : "Mostrar");
     }
 
     static void descobrirEndereco() { try { ip = descobrirIP(); } catch (SocketException e) { ip = "localhost"; } }
@@ -403,11 +418,7 @@ public class MagaDrop {
     }
 
     static void responder(HttpExchange troca, int status, String mensagem) throws IOException {
-        byte[] bytes = mensagem.getBytes(StandardCharsets.UTF_8);
-        troca.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
-        troca.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
-        troca.sendResponseHeaders(status, bytes.length);
-        try (OutputStream out = troca.getResponseBody()) { out.write(bytes); }
+        HttpSupport.sendText(troca, status, mensagem);
     }
 
     static class QrPanel extends JPanel {
@@ -454,7 +465,7 @@ public class MagaDrop {
             String nome = arquivo.getFileName().toString(); int ponto = nome.lastIndexOf('.');
             String ext = ponto >= 0 ? nome.substring(ponto + 1).toLowerCase(Locale.ROOT) : "";
             Headers h = troca.getResponseHeaders(); h.set("Content-Type", TIPOS.getOrDefault(ext, "application/octet-stream"));
-            h.set("X-Content-Type-Options", "nosniff"); h.set("Cache-Control", "no-cache");
+            HttpSupport.secureHeaders(troca); h.set("Cache-Control", "no-cache");
             h.set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'");
             long tamanho = Files.size(arquivo); troca.sendResponseHeaders(200, metodo.equals("HEAD") ? -1 : tamanho);
             if (metodo.equals("GET")) try (OutputStream out = troca.getResponseBody()) { Files.copy(arquivo, out); } else troca.close();
@@ -465,10 +476,9 @@ public class MagaDrop {
     static class UploadHandler implements HttpHandler {
         public void handle(HttpExchange troca) throws IOException {
             if (!troca.getRequestMethod().equals("POST")) { troca.getResponseHeaders().set("Allow", "POST"); responder(troca, 405, "Método não permitido"); return; }
-            String recebida = troca.getRequestHeaders().getFirst("X-Access-Code");
-            if (recebida == null || !MessageDigest.isEqual(senhaAcesso.getBytes(StandardCharsets.UTF_8), recebida.getBytes(StandardCharsets.UTF_8))) {
-                responder(troca, 401, "Senha de acesso inválida"); return;
-            }
+            Optional<SessionManager.Session> sessao = HttpSupport.session(troca, sessoes);
+            if (sessao.isEmpty()) { responder(troca, 401, "Entre no MagaDrop para enviar arquivos"); return; }
+            if (!HttpSupport.validCsrf(troca, sessao.get())) { responder(troca, 403, "Confirmação de segurança inválida"); return; }
             String nome = troca.getRequestHeaders().getFirst("X-Filename");
             if (nome == null || nome.isBlank() || nome.length() > 255 || nome.contains("/") || nome.contains("\\") || nome.equals(".") || nome.equals("..") || nome.chars().anyMatch(c -> c < 32)) {
                 responder(troca, 400, "Nome de arquivo inválido"); return;
@@ -479,7 +489,7 @@ public class MagaDrop {
             try (InputStream in = troca.getRequestBody(); OutputStream out = Files.newOutputStream(destino)) {
                 byte[] buffer = new byte[64 * 1024]; long total = 0; int lidos;
                 while ((lidos = in.read(buffer)) != -1) { total += lidos; if (total > LIMITE_UPLOAD) throw new UploadMuitoGrandeException(); out.write(buffer, 0, lidos); }
-                concluido = true; log("Recebido: " + destino.getFileName() + " (" + total + " bytes)"); responder(troca, 201, destino.getFileName().toString());
+                concluido = true; log("Recebido por " + sessao.get().username() + ": " + destino.getFileName() + " (" + total + " bytes)"); responder(troca, 201, destino.getFileName().toString());
             } catch (UploadMuitoGrandeException e) { responder(troca, 413, "Arquivo excede o limite de 2 GB"); }
             catch (IOException e) { log("Erro ao receber " + nome + ": " + e.getMessage()); try { responder(troca, 500, "Não foi possível salvar o arquivo"); } catch (IOException ignored) {} }
             finally { if (!concluido) Files.deleteIfExists(destino); }

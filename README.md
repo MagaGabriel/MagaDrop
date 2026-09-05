@@ -2,21 +2,30 @@
 
 Aplicativo Windows para receber arquivos de celulares e outros dispositivos conectados à mesma rede local.
 
+> A branch `codex/v3-contas-sessoes` contém a fundação da versão 3 em desenvolvimento. A versão estável continua preservada na tag e na Release `v2.0.0`.
+
 ## Como usar
 
 1. Abra o MagaDrop no computador e aguarde o servidor iniciar.
 2. No celular, conectado à mesma rede Wi-Fi, leia o QR code ou abra o endereço exibido.
-3. Digite no navegador a senha de acesso criada no aplicativo do computador.
+3. Entre com o usuário `admin` e a senha configurada no aplicativo do computador.
 4. Selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
 5. Use **Abrir pasta** para acessar os arquivos recebidos.
 
 Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pasta pode ser alterada depois na janela principal.
 
-## Segurança
+## Fundação de segurança da versão 3
 
-- A senha de acesso é criada pelo usuário e permanece salva nas preferências locais do Windows até ser alterada.
+- A senha da conta é protegida com PBKDF2-HMAC-SHA-256, salt aleatório e 600 mil iterações.
+- A senha legada da versão 2 é migrada para a conta `admin` e removida das preferências do Windows.
+- O navegador utiliza uma sessão aleatória de 256 bits em cookie `HttpOnly` e `SameSite=Strict`.
+- Operações de escrita exigem também um token contra requisições forjadas (CSRF).
+- Cinco falhas de login consecutivas bloqueiam novas tentativas por um minuto.
+- Sessões expiram após uma hora sem atividade ou doze horas no total.
 - Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
 - O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
+
+As próximas entregas da versão 3 são administração de usuários, pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
 
 ## Desenvolvimento
 

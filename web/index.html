@@ -4,10 +4,20 @@
   <title>MagaDrop</title><link rel="stylesheet" href="/style.css">
   <script src="/qrcode.min.js" defer></script><script src="/script.js" defer></script>
 </head><body><main class="layout">
-  <section class="card upload-card">
+  <section id="login-card" class="card auth-card">
+    <div class="brand"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Entre no servidor da sua família</p></div></div>
+    <form id="login-form">
+      <label for="username">Usuário</label>
+      <input id="username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" value="admin" required>
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+      <button class="primary" type="submit">Entrar</button>
+    </form>
+    <div id="login-status" class="status" aria-live="polite">Use a conta configurada no computador.</div>
+  </section>
+  <section id="app-card" class="card upload-card" hidden>
     <div class="brand"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Envie arquivos para este computador</p></div></div>
-    <label for="access-code">Senha criada no computador</label>
-    <input id="access-code" type="password" autocomplete="current-password" minlength="4" maxlength="32" placeholder="Digite a senha de acesso">
+    <div class="user-strip"><div><strong id="display-name"></strong><span id="user-role"></span></div><button id="logout" class="secondary" type="button">Sair</button></div>
     <div id="drop" class="drop" role="button" tabindex="0" aria-label="Escolher arquivos">
       <span class="drop-icon">↑</span><strong>Arraste os arquivos aqui</strong><span>ou clique para escolher</span>
     </div>
@@ -16,6 +26,6 @@
   </section>
   <aside class="card connect-card"><h2>Acesse pelo celular</h2><p>Use a mesma rede Wi-Fi e leia o QR code.</p>
     <div id="qrcode" class="qr" aria-label="QR code do endereço"></div><a id="link" class="link" href="/"></a>
-    <p class="privacy">Os arquivos são enviados diretamente para este computador.</p>
+    <p class="privacy">Contas e arquivos permanecem neste computador. A versão atual ainda não deve ser exposta à internet.</p>
   </aside>
 </main></body></html>

@@ -1,5 +1,4 @@
 import com.sun.net.httpserver.HttpServer;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +19,7 @@ public class MagaDropPreviewServer {
         MagaDrop.sessoes = new SessionManager();
         MagaDrop.tentativasLogin = new LoginRateLimiter();
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/api/session", new AuthHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/upload", new MagaDrop.UploadHandler());
         server.createContext("/", new MagaDrop.PaginaHandler());
@@ -32,7 +31,11 @@ public class MagaDropPreviewServer {
             } catch (Exception ignored) {}
         }));
         server.start();
-        System.out.println("PREVIEW_URL=http://127.0.0.1:" + server.getAddress().getPort());
+        String networkAddress;
+        try { networkAddress = "http://" + MagaDrop.descobrirIP() + ":" + server.getAddress().getPort(); }
+        catch (Exception e) { networkAddress = "indisponível"; }
+        System.out.println("PREVIEW_URL_LOCAL=http://127.0.0.1:" + server.getAddress().getPort());
+        System.out.println("PREVIEW_URL_NETWORK=" + networkAddress);
         System.out.println("PREVIEW_LOGIN=admin / Teste seguro 123!");
         new CountDownLatch(1).await();
     }

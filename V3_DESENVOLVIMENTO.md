@@ -45,13 +45,14 @@ Implementado:
 - redefinição segura da senha de membros;
 - ativação e desativação de contas;
 - encerramento remoto das sessões de um membro;
+- exclusão permanente de contas de membro, com confirmação pelo nome e senha atual do administrador;
 - área **Minha conta** para cada pessoa trocar a própria senha;
 - área **Usuários** no navegador, visível somente para administradores;
 - nova autenticação do administrador antes de cada ação sensível;
 - revogação automática de sessões após troca de senha ou desativação;
 - testes que comprovam que membros não acessam a administração.
 
-Senhas atuais e hashes nunca são enviados pela API. O administrador pode somente definir uma nova senha.
+Senhas atuais e hashes nunca são enviados pela API. O administrador pode somente definir uma nova senha. A conta administradora principal não pode ser desativada nem excluída. Como ainda não existem pastas pessoais, a exclusão atual remove somente a conta; o tratamento dos arquivos será definido junto ao próximo marco.
 
 ## Próximo marco
 

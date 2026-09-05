@@ -28,8 +28,8 @@ Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs creat
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"; Flags: checkedonce
 
 [Icons]
-Name: "{autoprograms}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"
-Name: "{autodesktop}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"
+Name: "{autodesktop}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Description: "Abrir MagaDrop 3 Preview"; Flags: nowait postinstall skipifsilent

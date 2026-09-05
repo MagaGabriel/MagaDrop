@@ -25,6 +25,10 @@ const adminActionTitle = document.getElementById("admin-action-title");
 const adminActionDescription = document.getElementById("admin-action-description");
 const adminActionStatus = document.getElementById("admin-action-status");
 const actionNewPasswordFields = document.getElementById("action-new-password-fields");
+const actionConfirmationFields = document.getElementById("action-confirmation-fields");
+const actionConfirmation = document.getElementById("action-confirmation");
+const actionConfirmationLabel = document.getElementById("action-confirmation-label");
+const adminActionSubmit = document.getElementById("admin-action-submit");
 const link = document.getElementById("link");
 let csrfToken = "";
 let currentUser = null;
@@ -157,6 +161,7 @@ function renderUsers(users) {
       actions.append(actionButton("Redefinir senha", () => openAdminAction("reset-password", user)));
       actions.append(actionButton(user.enabled ? "Desativar" : "Ativar", () => openAdminAction("set-enabled", user)));
       actions.append(actionButton("Encerrar sessões", () => openAdminAction("revoke-sessions", user)));
+      actions.append(actionButton("Excluir", () => openAdminAction("delete", user), true));
       card.append(actions);
     }
     usersList.append(card);
@@ -189,14 +194,23 @@ async function createUser(event) {
 function openAdminAction(action, user) {
   selectedAdminAction = {action, user};
   const reset = action === "reset-password";
+  const deleting = action === "delete";
+  adminActionForm.reset();
   actionNewPasswordFields.hidden = !reset;
   document.getElementById("action-new-password").required = reset;
   document.getElementById("action-confirm-password").required = reset;
-  adminActionTitle.textContent = action === "reset-password" ? "Redefinir senha" : action === "set-enabled" ? (user.enabled ? "Desativar usuário" : "Ativar usuário") : "Encerrar sessões";
+  actionConfirmationFields.hidden = !deleting;
+  actionConfirmation.required = deleting;
+  actionConfirmationLabel.textContent = `Digite ${user.username} para confirmar`;
+  actionConfirmation.placeholder = user.username;
+  adminActionPanel.classList.toggle("destructive", deleting);
+  adminActionSubmit.classList.toggle("destructive", deleting);
+  adminActionSubmit.textContent = deleting ? "Excluir permanentemente" : "Confirmar";
+  adminActionTitle.textContent = action === "reset-password" ? "Redefinir senha" : action === "set-enabled" ? (user.enabled ? "Desativar usuário" : "Ativar usuário") : action === "delete" ? "Excluir membro" : "Encerrar sessões";
   adminActionDescription.textContent = action === "reset-password" ? `Defina uma nova senha para @${user.username}. As sessões atuais serão encerradas.`
     : action === "set-enabled" ? `${user.enabled ? "Desativar" : "Ativar"} o acesso de @${user.username}.`
+    : action === "delete" ? `A conta @${user.username} será removida permanentemente e todas as sessões serão encerradas.`
     : `Encerrar todas as sessões de @${user.username}.`;
-  adminActionForm.reset();
   setStatus(adminActionStatus, "");
   adminActionPanel.hidden = false;
   adminActionPanel.scrollIntoView({behavior:"smooth", block:"nearest"});
@@ -221,6 +235,7 @@ async function runAdminAction(event) {
     data.password = newPassword;
   }
   if (action === "set-enabled") data.enabled = String(!user.enabled);
+  if (action === "delete") data.confirmation = actionConfirmation.value;
   setStatus(adminActionStatus, "Confirmando ação...", "sending");
   try {
     const response = await postForm("/api/users", data);
@@ -230,8 +245,8 @@ async function runAdminAction(event) {
   } catch { setStatus(adminActionStatus, "Falha de conexão com o servidor.", "error"); }
 }
 
-function actionButton(label, handler) {
-  const button = document.createElement("button"); button.type = "button"; button.className = "small-button"; button.textContent = label;
+function actionButton(label, handler, destructive = false) {
+  const button = document.createElement("button"); button.type = "button"; button.className = `small-button${destructive ? " destructive" : ""}`; button.textContent = label;
   button.addEventListener("click", handler); return button;
 }
 

@@ -76,6 +76,7 @@ final class UserAdminHandler implements HttpHandler {
                 case "reset-password" -> resetPassword(session, form);
                 case "set-enabled" -> setEnabled(form);
                 case "revoke-sessions" -> revokeSessions(session, form);
+                case "delete" -> delete(form);
                 default -> throw new IllegalArgumentException("Ação administrativa inválida.");
             };
             HttpSupport.sendJson(exchange, status, "{\"ok\":true}");
@@ -119,6 +120,16 @@ final class UserAdminHandler implements HttpHandler {
         if (target.id().equals(session.userId()))
             throw new IllegalArgumentException("Use o botão Sair para encerrar sua sessão atual.");
         sessions.invalidateAllForUser(target.id());
+        return 200;
+    }
+
+    private int delete(Map<String, String> form) throws IOException {
+        UserAccount target = target(form);
+        String confirmation = form.getOrDefault("confirmation", "").trim();
+        if (!target.username().equals(confirmation))
+            throw new IllegalArgumentException("Digite o nome de usuário exatamente como exibido para confirmar.");
+        UserAccount deleted = users.deleteMember(target.username());
+        sessions.invalidateAllForUser(deleted.id());
         return 200;
     }
 

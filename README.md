@@ -25,7 +25,7 @@ Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pas
 - Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
 - O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
 
-A versão 3 já inclui administração de usuários no aplicativo Windows e no navegador: criação de membros, redefinição de senha, ativação, desativação, encerramento de sessões e troca da própria senha. As próximas entregas são pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
+A versão 3 já inclui administração de usuários no aplicativo Windows e no navegador: criação e exclusão segura de membros, redefinição de senha, ativação, desativação, encerramento de sessões e troca da própria senha. As próximas entregas são pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
 
 ## Desenvolvimento
 
@@ -43,6 +43,7 @@ O instalador da prévia usa o nome **MagaDrop 3 Preview**, uma pasta própria em
 
 - `src/`: servidor HTTP e interface Java Swing.
 - `web/`: interface responsiva servida aos dispositivos.
+- `web/maga-logo.png`: identidade visual usada no site, na janela e na bandeja do Windows.
 - `tests/`: teste integrado local.
 - `jre/`: runtime Java distribuído com o instalador.
 

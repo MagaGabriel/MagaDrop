@@ -164,8 +164,15 @@ public class MagaDrop {
         cabecalho.setBorder(BorderFactory.createEmptyBorder(16, 18, 0, 18));
         JLabel titulo = new JLabel("MagaDrop 3 Preview"); titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titulo.setToolTipText("Versão " + VERSAO);
+        JPanel marca = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)); marca.setOpaque(false);
+        Path logoPath = pastaWeb.resolve("maga-logo.png");
+        if (Files.isRegularFile(logoPath)) {
+            ImageIcon logo = new ImageIcon(logoPath.toString());
+            marca.add(new JLabel(logo)); janela.setIconImage(logo.getImage());
+        }
+        marca.add(titulo);
         statusLabel = new JLabel("Iniciando..."); statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        cabecalho.add(titulo, BorderLayout.WEST); cabecalho.add(statusLabel, BorderLayout.EAST);
+        cabecalho.add(marca, BorderLayout.WEST); cabecalho.add(statusLabel, BorderLayout.EAST);
         janela.add(cabecalho, BorderLayout.NORTH);
 
         JPanel conteudo = new JPanel(new GridLayout(1, 2, 14, 0));
@@ -340,14 +347,17 @@ public class MagaDrop {
                 if (selecionado.equals(modelo.getValueAt(i, 0))) { tabela.setRowSelectionInterval(i, i); break; }
         };
         JButton criar = new JButton("Criar membro"), redefinir = new JButton("Redefinir senha");
-        JButton alternar = new JButton("Ativar/desativar"), encerrar = new JButton("Encerrar sessões"), fechar = new JButton("Fechar");
+        JButton alternar = new JButton("Ativar/desativar"), encerrar = new JButton("Encerrar sessões");
+        JButton excluir = new JButton("Excluir membro"), fechar = new JButton("Fechar");
+        excluir.setForeground(new Color(170, 30, 45));
         criar.addActionListener(e -> criarMembroDesktop(dialogo, atualizar));
         redefinir.addActionListener(e -> redefinirSenhaDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
         alternar.addActionListener(e -> alternarUsuarioDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
         encerrar.addActionListener(e -> encerrarSessoesDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
+        excluir.addActionListener(e -> excluirMembroDesktop(dialogo, usuarioSelecionado(tabela), atualizar));
         fechar.addActionListener(e -> dialogo.dispose());
-        JPanel acoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        acoes.add(criar); acoes.add(redefinir); acoes.add(alternar); acoes.add(encerrar); acoes.add(fechar);
+        JPanel acoes = new JPanel(new GridLayout(2, 3, 6, 6));
+        acoes.add(criar); acoes.add(redefinir); acoes.add(alternar); acoes.add(encerrar); acoes.add(excluir); acoes.add(fechar);
         JPanel conteudo = new JPanel(new BorderLayout(8, 8)); conteudo.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         conteudo.add(new JScrollPane(tabela), BorderLayout.CENTER); conteudo.add(acoes, BorderLayout.SOUTH);
         dialogo.setContentPane(conteudo); dialogo.setSize(760, 380); dialogo.setMinimumSize(new Dimension(680, 330));
@@ -427,6 +437,28 @@ public class MagaDrop {
         try {
             verificarAdministrador(new String(senhaAdmin.getPassword())); sessoes.invalidateAllForUser(conta.id());
             atualizar.run(); log("Sessões encerradas no computador para " + conta.username());
+        } catch (Exception e) { mostrarErroUsuario(parent, e); }
+    }
+
+    static void excluirMembroDesktop(Component parent, UserAccount conta, Runnable atualizar) {
+        if (conta == null) return;
+        if (conta.role() == UserRole.ADMIN) {
+            JOptionPane.showMessageDialog(parent, "A conta administradora principal não pode ser excluída.", "Usuários", JOptionPane.INFORMATION_MESSAGE); return;
+        }
+        JTextField confirmacao = new JTextField(18);
+        JPasswordField senhaAdmin = new JPasswordField(18);
+        JPanel painel = formulario(new String[]{"A conta @" + conta.username() + " será removida permanentemente.",
+                        "Digite " + conta.username() + " para confirmar:", "Sua senha de administrador:"},
+                new JComponent[]{new JLabel("Todas as sessões serão encerradas."), confirmacao, senhaAdmin});
+        if (JOptionPane.showConfirmDialog(parent, painel, "Excluir membro", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.WARNING_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try {
+            if (!conta.username().equals(confirmacao.getText().trim()))
+                throw new IllegalArgumentException("O nome de usuário digitado não confere.");
+            verificarAdministrador(new String(senhaAdmin.getPassword()));
+            UserAccount excluida = usuarios.deleteMember(conta.username());
+            sessoes.invalidateAllForUser(excluida.id());
+            atualizar.run(); log("Usuário excluído no computador: " + excluida.username());
         } catch (Exception e) { mostrarErroUsuario(parent, e); }
     }
 
@@ -539,7 +571,9 @@ public class MagaDrop {
             PopupMenu menu = new PopupMenu(); MenuItem abrir = new MenuItem("Abrir"), sair = new MenuItem("Sair");
             abrir.addActionListener(e -> janela.setVisible(true)); sair.addActionListener(e -> { pararServidor(); System.exit(0); });
             menu.add(abrir); menu.add(sair);
-            TrayIcon icon = new TrayIcon(Toolkit.getDefaultToolkit().getImage(Paths.get(baseDir, "file.ico").toString()), "MagaDrop", menu);
+            Path logoPath = pastaWeb.resolve("maga-logo.png");
+            Path trayPath = Files.isRegularFile(logoPath) ? logoPath : Paths.get(baseDir, "file.ico");
+            TrayIcon icon = new TrayIcon(Toolkit.getDefaultToolkit().getImage(trayPath.toString()), "MagaDrop", menu);
             icon.setImageAutoSize(true); SystemTray.getSystemTray().add(icon);
         } catch (Exception e) { log("Não foi possível criar o ícone da bandeja"); }
     }

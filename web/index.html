@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="pt-BR"><head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MagaDrop</title><link rel="stylesheet" href="/style.css">
+  <title>MagaDrop</title><link rel="icon" type="image/png" href="/maga-logo.png"><link rel="stylesheet" href="/style.css">
   <script src="/qrcode.min.js" defer></script><script src="/script.js" defer></script>
 </head><body><main class="layout">
   <section id="login-card" class="card auth-card">
-    <div class="brand"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Entre no servidor da sua família</p></div></div>
+    <div class="brand"><img class="logo" src="/maga-logo.png" alt="Logo do MagaDrop"><div><h1>MagaDrop</h1><p>Entre no servidor da sua família</p></div></div>
     <form id="login-form">
       <label for="username">Usuário</label>
       <input id="username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" value="admin" required>
@@ -17,7 +17,7 @@
   </section>
 
   <section id="app-card" class="card app-card" hidden>
-    <div class="brand compact"><span class="logo">M</span><div><h1>MagaDrop</h1><p>Servidor de arquivos da família</p></div></div>
+    <div class="brand compact"><img class="logo" src="/maga-logo.png" alt="Logo do MagaDrop"><div><h1>MagaDrop</h1><p>Servidor de arquivos da família</p></div></div>
     <div class="user-strip"><div><strong id="display-name"></strong><span id="user-role"></span></div><button id="logout" class="secondary" type="button">Sair</button></div>
     <nav class="app-nav" aria-label="Áreas do MagaDrop">
       <button class="nav-button active" type="button" data-view="upload-view">Enviar</button>
@@ -78,9 +78,13 @@
             <label for="action-confirm-password">Confirmar nova senha</label>
             <input id="action-confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128">
           </div>
+          <div id="action-confirmation-fields" hidden>
+            <label id="action-confirmation-label" for="action-confirmation">Confirme o nome de usuário</label>
+            <input id="action-confirmation" type="text" autocomplete="off" maxlength="32">
+          </div>
           <label for="action-admin-password">Sua senha de administrador</label>
           <input id="action-admin-password" type="password" autocomplete="current-password" maxlength="128" required>
-          <div class="action-buttons"><button class="primary danger-aware" type="submit">Confirmar</button><button id="cancel-admin-action" class="secondary" type="button">Cancelar</button></div>
+          <div class="action-buttons"><button id="admin-action-submit" class="primary" type="submit">Confirmar</button><button id="cancel-admin-action" class="secondary" type="button">Cancelar</button></div>
         </form>
         <div id="admin-action-status" class="status" aria-live="polite"></div>
       </section>

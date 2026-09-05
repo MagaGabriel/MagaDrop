@@ -82,6 +82,16 @@ final class UserStore {
         return updated;
     }
 
+    synchronized UserAccount deleteMember(String username) throws IOException {
+        UserAccount current = find(username).orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+        if (current.role() == UserRole.ADMIN)
+            throw new IllegalArgumentException("A conta administradora principal não pode ser excluída.");
+        byUsername.remove(current.username());
+        try { save(); }
+        catch (IOException e) { byUsername.put(current.username(), current); throw e; }
+        return current;
+    }
+
     synchronized UserAccount initialAdmin() {
         return byUsername.values().stream().filter(u -> u.role() == UserRole.ADMIN).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Nenhum administrador foi configurado."));

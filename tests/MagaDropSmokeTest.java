@@ -80,6 +80,10 @@ public class MagaDropSmokeTest {
         try { MagaDrop.usuarios.setEnabled("admin", false); }
         catch (IllegalArgumentException e) { adminDisableRejected = true; }
         check(adminDisableRejected, "administrador principal não pode ser desativado");
+        boolean adminDeleteRejected = false;
+        try { MagaDrop.usuarios.deleteMember("admin"); }
+        catch (IllegalArgumentException e) { adminDeleteRejected = true; }
+        check(adminDeleteRejected && MagaDrop.usuarios.find("admin").isPresent(), "administrador principal não pode ser excluído");
     }
 
     private static void testSessions() {
@@ -191,6 +195,21 @@ public class MagaDropSmokeTest {
         check(changed.statusCode() == 204, "membro altera a própria senha");
         check(upload(client, base, "senha-alterada.txt", member.cookie(), member.csrf()).statusCode() == 401, "troca da própria senha encerra sessões");
         check(login(client, base, "esposa", "Senha escolhida pela esposa 654!").statusCode() == 200, "nova senha do membro funciona");
+
+        LoginSession child = loginSession(client, base, "filho", "Senha inicial do filho 789!");
+        Map<String, String> wrongDelete = action("delete", "filho"); wrongDelete.put("confirmation", "outro");
+        check(adminAction(client, base, adminCookie, adminCsrf, wrongDelete).statusCode() == 400, "exclusão exige confirmação exata");
+        check(MagaDrop.usuarios.find("filho").isPresent(), "confirmação incorreta preserva membro");
+
+        Map<String, String> delete = action("delete", "filho"); delete.put("confirmation", "filho");
+        check(adminAction(client, base, adminCookie, adminCsrf, delete).statusCode() == 200, "administrador exclui membro");
+        check(MagaDrop.usuarios.find("filho").isEmpty(), "membro excluído do cadastro");
+        check(upload(client, base, "excluido.txt", child.cookie(), child.csrf()).statusCode() == 401, "exclusão encerra sessões do membro");
+        check(login(client, base, "filho", "Senha inicial do filho 789!").statusCode() == 401, "membro excluído não entra");
+
+        Map<String, String> deleteAdmin = action("delete", "admin"); deleteAdmin.put("confirmation", "admin");
+        check(adminAction(client, base, adminCookie, adminCsrf, deleteAdmin).statusCode() == 400, "API não exclui administrador principal");
+        check(MagaDrop.usuarios.find("admin").isPresent(), "administrador permanece cadastrado");
     }
 
     private static Map<String, String> action(String action, String username) {

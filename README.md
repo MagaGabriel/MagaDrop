@@ -13,6 +13,8 @@ Aplicativo Windows para enviar, organizar e baixar arquivos de celulares e outro
 5. Abra **Arquivos** para criar pastas, navegar, baixar itens no celular ou enviá-los para a lixeira.
 6. No Windows, use **Abrir compartilhada** ou **Pastas pessoais** para acessar os arquivos diretamente.
 
+Ao fechar a janela no Windows, o MagaDrop continua funcionando na bandeja do sistema. Use **Sair** no ícone da bandeja quando quiser realmente encerrar o servidor.
+
 Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pasta pode ser alterada depois na janela principal.
 
 ## Fundação de segurança da versão 3

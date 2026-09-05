@@ -159,7 +159,8 @@ public class MagaDrop {
 
     static void criarInterface() {
         janela = new JFrame("MagaDrop 3 Preview"); janela.setSize(820, 620); janela.setMinimumSize(new Dimension(720, 560));
-        janela.setLocationRelativeTo(null); janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        janela.setLocationRelativeTo(null);
+        janela.setDefaultCloseOperation(SystemTray.isSupported() ? JFrame.HIDE_ON_CLOSE : JFrame.EXIT_ON_CLOSE);
         janela.setLayout(new BorderLayout(12, 12));
 
         JPanel cabecalho = new JPanel(new BorderLayout());
@@ -191,7 +192,8 @@ public class MagaDrop {
         rodape.add(detalhes, BorderLayout.CENTER);
         janela.add(rodape, BorderLayout.SOUTH);
 
-        janela.setVisible(true); criarTray(); atualizarInterface(); log("MagaDrop iniciado");
+        janela.setVisible(true); criarTray(); atualizarInterface();
+        log("MagaDrop iniciado" + (SystemTray.isSupported() ? "; fechar a janela mantém o servidor na bandeja" : ""));
     }
 
     static JPanel criarPainelConexao() {

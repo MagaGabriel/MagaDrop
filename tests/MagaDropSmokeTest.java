@@ -47,6 +47,7 @@ public class MagaDropSmokeTest {
         Files.createDirectories(MagaDrop.pastaUploads);
         MagaDrop.usuarios = new UserStore(temporary.resolve("data/users.properties"));
         MagaDrop.usuarios.createInitialAdmin("admin", "Administrador", PASSWORD);
+        MagaDrop.armazenamento = new StorageService(MagaDrop.pastaUploads, temporary.resolve("data/Pessoal"));
         MagaDrop.sessoes = new SessionManager();
         MagaDrop.tentativasLogin = new LoginRateLimiter();
     }
@@ -111,6 +112,8 @@ public class MagaDropSmokeTest {
         server.createContext("/api/session", new AuthHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/api/account/password", new AccountPasswordHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/api/users", new UserAdminHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/files", new FileHandler(MagaDrop.armazenamento, MagaDrop.sessoes));
+        server.createContext("/api/download", new DownloadHandler(MagaDrop.armazenamento, MagaDrop.sessoes));
         server.createContext("/upload", new MagaDrop.UploadHandler());
         server.createContext("/", new MagaDrop.PaginaHandler());
         server.setExecutor(Executors.newCachedThreadPool(runnable -> {
@@ -136,6 +139,7 @@ public class MagaDropSmokeTest {
             check(validLogin.headers().firstValue("Set-Cookie").orElseThrow().contains("HttpOnly"), "cookie HttpOnly");
             check(validLogin.headers().firstValue("Set-Cookie").orElseThrow().contains("SameSite=Strict"), "cookie SameSite estrito");
 
+            testFileManagement(client, base, cookie, csrf, temporary);
             testUserAdministration(client, base, cookie, csrf);
 
             check(upload(client, base, "teste.txt", cookie, null).statusCode() == 403, "upload sem CSRF rejeitado");
@@ -212,6 +216,66 @@ public class MagaDropSmokeTest {
         check(MagaDrop.usuarios.find("admin").isPresent(), "administrador permanece cadastrado");
     }
 
+    private static void testFileManagement(HttpClient client, URI base, String adminCookie, String adminCsrf, Path temporary) throws Exception {
+        HttpRequest anonymous = HttpRequest.newBuilder(filesUri(base, "personal", "")).GET().build();
+        check(client.send(anonymous, HttpResponse.BodyHandlers.ofString()).statusCode() == 401, "arquivos exigem autenticação");
+
+        LoginSession member = loginSession(client, base, "esposa", "Outra frase senha 456!");
+        Map<String, String> personalFolder = fileAction("create-folder", "personal", "");
+        personalFolder.put("name", "Fotos");
+        check(postForm(client, base.resolve("/api/files"), member.cookie(), member.csrf(), personalFolder).statusCode() == 201,
+                "membro cria pasta pessoal");
+        check(upload(client, base, "foto.txt", member.cookie(), member.csrf(), "personal", "Fotos").statusCode() == 201,
+                "membro envia arquivo para pasta pessoal escolhida");
+        String memberPersonal = getFiles(client, base, member.cookie(), "personal", "Fotos").body();
+        check(memberPersonal.contains("\"name\":\"foto.txt\""), "membro lista o próprio arquivo");
+        check(!getFiles(client, base, adminCookie, "personal", "").body().contains("Fotos"), "pastas pessoais são isoladas por conta");
+
+        HttpResponse<String> personalDownload = download(client, base, member.cookie(), "personal", "Fotos/foto.txt");
+        check(personalDownload.statusCode() == 200 && personalDownload.body().equals("conteúdo"), "membro baixa arquivo pessoal");
+        check(personalDownload.headers().firstValue("Content-Disposition").orElse("").contains("attachment"), "download força anexo");
+        check(download(client, base, adminCookie, "personal", "Fotos/foto.txt").statusCode() == 404,
+                "administrador não atravessa para pasta pessoal de membro");
+
+        Map<String, String> sharedFolder = fileAction("create-folder", "shared", ""); sharedFolder.put("name", "Familia");
+        check(postForm(client, base.resolve("/api/files"), adminCookie, adminCsrf, sharedFolder).statusCode() == 201,
+                "administrador cria pasta compartilhada");
+        check(upload(client, base, "documento.txt", member.cookie(), member.csrf(), "shared", "Familia").statusCode() == 201,
+                "membro envia para pasta compartilhada");
+        check(getFiles(client, base, adminCookie, "shared", "Familia").body().contains("documento.txt"),
+                "administrador vê arquivo compartilhado");
+        check(download(client, base, member.cookie(), "shared", "Familia/documento.txt").statusCode() == 200,
+                "membro baixa arquivo compartilhado");
+
+        check(getFiles(client, base, member.cookie(), "personal", "../").statusCode() == 400, "travessia na listagem é rejeitada");
+        Map<String, String> invalidFolder = fileAction("create-folder", "personal", ""); invalidFolder.put("name", "..");
+        check(postForm(client, base.resolve("/api/files"), member.cookie(), member.csrf(), invalidFolder).statusCode() == 400,
+                "nome de pasta perigoso é rejeitado");
+
+        Map<String, String> deleteFile = fileAction("delete", "personal", "Fotos/foto.txt");
+        check(postForm(client, base.resolve("/api/files"), member.cookie(), member.csrf(), deleteFile).statusCode() == 200,
+                "arquivo pessoal vai para lixeira");
+        check(download(client, base, member.cookie(), "personal", "Fotos/foto.txt").statusCode() == 404,
+                "arquivo excluído deixa de aparecer");
+        Map<String, String> deletePersonalFolder = fileAction("delete", "personal", "Fotos");
+        check(postForm(client, base.resolve("/api/files"), member.cookie(), member.csrf(), deletePersonalFolder).statusCode() == 200,
+                "pasta pessoal vai para lixeira");
+
+        Map<String, String> deleteSharedFolder = fileAction("delete", "shared", "Familia");
+        check(postForm(client, base.resolve("/api/files"), member.cookie(), member.csrf(), deleteSharedFolder).statusCode() == 200,
+                "pasta compartilhada não vazia vai para lixeira");
+        check(!Files.exists(temporary.resolve("uploads/Familia")), "item compartilhado removido da visualização");
+        check(Files.isDirectory(temporary.resolve("uploads/.magadrop-trash")), "lixeira compartilhada criada");
+        try (var paths = Files.walk(temporary.resolve("data/Pessoal"))) {
+            check(paths.anyMatch(path -> path.getFileName().toString().equals(".magadrop-trash")), "lixeira pessoal criada");
+        }
+    }
+
+    private static Map<String, String> fileAction(String action, String area, String path) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("action", action); values.put("area", area); values.put("path", path); return values;
+    }
+
     private static Map<String, String> action(String action, String username) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put("action", action); values.put("username", username); values.put("currentPassword", PASSWORD);
@@ -253,11 +317,37 @@ public class MagaDropSmokeTest {
     }
 
     private static HttpResponse<String> upload(HttpClient client, URI base, String name, String cookie, String csrf) throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(base.resolve("/upload"))
+        return upload(client, base, name, cookie, csrf, null, null);
+    }
+
+    private static HttpResponse<String> upload(HttpClient client, URI base, String name, String cookie, String csrf,
+                                               String area, String path) throws Exception {
+        URI target = base.resolve("/upload");
+        if (area != null) target = URI.create(base + "/upload?area=" + encode(area) + "&path=" + encode(path));
+        HttpRequest.Builder request = HttpRequest.newBuilder(target)
                 .header("X-Filename", name).POST(HttpRequest.BodyPublishers.ofString("conteúdo", StandardCharsets.UTF_8));
         if (cookie != null) request.header("Cookie", cookie);
         if (csrf != null) request.header("X-CSRF-Token", csrf);
         return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static HttpResponse<String> getFiles(HttpClient client, URI base, String cookie, String area, String path) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(filesUri(base, area, path)).header("Cookie", cookie).GET().build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static URI filesUri(URI base, String area, String path) {
+        return URI.create(base + "/api/files?area=" + encode(area) + "&path=" + encode(path));
+    }
+
+    private static HttpResponse<String> download(HttpClient client, URI base, String cookie, String area, String path) throws Exception {
+        URI uri = URI.create(base + "/api/download?area=" + encode(area) + "&path=" + encode(path));
+        HttpRequest request = HttpRequest.newBuilder(uri).header("Cookie", cookie).GET().build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
     private static String jsonField(String json, String field) {

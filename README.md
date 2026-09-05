@@ -1,6 +1,6 @@
 # MagaDrop
 
-Aplicativo Windows para receber arquivos de celulares e outros dispositivos conectados à mesma rede local.
+Aplicativo Windows para enviar, organizar e baixar arquivos de celulares e outros dispositivos conectados à mesma rede local.
 
 > A branch `codex/v3-contas-sessoes` contém a fundação da versão 3 em desenvolvimento. A versão estável continua preservada na tag e na Release `v2.0.0`.
 
@@ -9,8 +9,9 @@ Aplicativo Windows para receber arquivos de celulares e outros dispositivos cone
 1. Abra o MagaDrop no computador e aguarde o servidor iniciar.
 2. No celular, conectado à mesma rede Wi-Fi, leia o QR code ou abra o endereço exibido.
 3. Entre com o usuário `admin` e a senha configurada no aplicativo do computador.
-4. Selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
-5. Use **Abrir pasta** para acessar os arquivos recebidos.
+4. Escolha uma pasta em **Pessoal** ou **Compartilhada** e selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
+5. Abra **Arquivos** para criar pastas, navegar, baixar itens no celular ou enviá-los para a lixeira.
+6. No Windows, use **Abrir compartilhada** ou **Pastas pessoais** para acessar os arquivos diretamente.
 
 Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pasta pode ser alterada depois na janela principal.
 
@@ -23,9 +24,12 @@ Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pas
 - Cinco falhas de login consecutivas bloqueiam novas tentativas por um minuto.
 - Sessões expiram após uma hora sem atividade ou doze horas no total.
 - Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
+- Pastas pessoais são vinculadas ao identificador interno da conta e isoladas no servidor.
+- Downloads e operações de arquivo nunca recebem caminhos absolutos do Windows.
+- Exclusões movem arquivos e pastas para uma lixeira interna, permitindo recuperação no computador.
 - O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
 
-A versão 3 já inclui administração de usuários no aplicativo Windows e no navegador: criação e exclusão segura de membros, redefinição de senha, ativação, desativação, encerramento de sessões e troca da própria senha. As próximas entregas são pastas pessoais e compartilhadas, explorador de arquivos e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
+A versão 3 já inclui administração de usuários, pastas pessoais e compartilhadas, explorador de arquivos, escolha do destino dos uploads, criação de pastas, lixeira e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
 
 ## Desenvolvimento
 

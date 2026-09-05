@@ -60,6 +60,21 @@ final class HttpSupport {
         return values;
     }
 
+    static Map<String, String> readQuery(HttpExchange exchange) throws InvalidRequestException {
+        Map<String, String> values = new LinkedHashMap<>();
+        String raw = exchange.getRequestURI().getRawQuery();
+        if (raw == null || raw.isEmpty()) return values;
+        if (raw.length() > 8 * 1024) throw new InvalidRequestException("Endereço muito grande.", 414);
+        for (String item : raw.split("&")) {
+            if (item.isEmpty()) continue;
+            int equals = item.indexOf('=');
+            String key = decode(equals < 0 ? item : item.substring(0, equals));
+            String value = decode(equals < 0 ? "" : item.substring(equals + 1));
+            values.putIfAbsent(key, value);
+        }
+        return values;
+    }
+
     static Optional<SessionManager.Session> session(HttpExchange exchange, SessionManager manager) {
         return manager.find(cookie(exchange, SessionManager.COOKIE_NAME));
     }

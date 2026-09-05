@@ -16,6 +16,7 @@ public class MagaDropPreviewServer {
         Files.createDirectories(MagaDrop.pastaUploads);
         MagaDrop.usuarios = new UserStore(temporary.resolve("data/users.properties"));
         MagaDrop.usuarios.createInitialAdmin("admin", "Administrador", "Teste seguro 123!");
+        MagaDrop.armazenamento = new StorageService(MagaDrop.pastaUploads, temporary.resolve("data/Pessoal"));
         MagaDrop.sessoes = new SessionManager();
         MagaDrop.tentativasLogin = new LoginRateLimiter();
 
@@ -23,6 +24,8 @@ public class MagaDropPreviewServer {
         server.createContext("/api/session", new AuthHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/api/account/password", new AccountPasswordHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
         server.createContext("/api/users", new UserAdminHandler(MagaDrop.usuarios, MagaDrop.sessoes, MagaDrop.tentativasLogin));
+        server.createContext("/api/files", new FileHandler(MagaDrop.armazenamento, MagaDrop.sessoes));
+        server.createContext("/api/download", new DownloadHandler(MagaDrop.armazenamento, MagaDrop.sessoes));
         server.createContext("/upload", new MagaDrop.UploadHandler());
         server.createContext("/", new MagaDrop.PaginaHandler());
         server.setExecutor(Executors.newFixedThreadPool(4));

@@ -54,14 +54,28 @@ Implementado:
 
 Senhas atuais e hashes nunca são enviados pela API. O administrador pode somente definir uma nova senha. A conta administradora principal não pode ser desativada nem excluída. Como ainda não existem pastas pessoais, a exclusão atual remove somente a conta; o tratamento dos arquivos será definido junto ao próximo marco.
 
+## Marco 3: armazenamento e arquivos
+
+Implementado:
+
+- raiz pessoal exclusiva por identificador interno de usuário;
+- raiz compartilhada baseada na pasta escolhida no aplicativo Windows;
+- seleção visual do destino antes de enviar arquivos;
+- navegação e listagem de pastas sem expor caminhos absolutos do Windows;
+- criação segura de subpastas;
+- download de arquivos pessoais e compartilhados;
+- exclusão recuperável, movendo itens para uma lixeira interna;
+- bloqueio de travessia de diretório, links simbólicos e junções;
+- testes de isolamento entre contas e de todas as operações de arquivo.
+
+A pasta compartilhada continua sendo o destino configurado nas versões anteriores. As pastas pessoais ficam em `%LOCALAPPDATA%\MagaDrop\Pessoal`. A proteção é aplicada pelo servidor do MagaDrop; contas do próprio Windows com acesso ao disco continuam sujeitas às permissões do sistema operacional.
+
 ## Próximo marco
 
-1. Raízes de armazenamento `Pessoal` e `Compartilhados`.
-2. Permissões verificadas no servidor em todas as operações.
-3. Listagem de arquivos e criação segura de pastas.
-4. Download por identificador interno, sem expor caminhos do Windows.
-
-Excluir arquivos continuará desabilitado até existir lixeira, registro de auditoria e testes de recuperação.
+1. Tela de lixeira com restauração de arquivos.
+2. Registro persistente de auditoria.
+3. Dispositivos autorizados e HTTPS.
+4. Acesso externo sem abertura direta da porta do roteador.
 
 ## Limite atual
 

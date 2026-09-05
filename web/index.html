@@ -21,16 +21,33 @@
     <div class="user-strip"><div><strong id="display-name"></strong><span id="user-role"></span></div><button id="logout" class="secondary" type="button">Sair</button></div>
     <nav class="app-nav" aria-label="Áreas do MagaDrop">
       <button class="nav-button active" type="button" data-view="upload-view">Enviar</button>
+      <button class="nav-button" type="button" data-view="files-view">Arquivos</button>
       <button class="nav-button" type="button" data-view="account-view">Minha conta</button>
       <button id="admin-nav" class="nav-button" type="button" data-view="admin-view" hidden>Usuários</button>
     </nav>
 
     <section id="upload-view" class="view">
+      <div class="upload-destination"><div><span>Salvar em</span><strong id="upload-destination-label">Pessoal /</strong></div><button id="choose-upload-folder" class="secondary" type="button">Escolher pasta</button></div>
       <div id="drop" class="drop" role="button" tabindex="0" aria-label="Escolher arquivos">
         <span class="drop-icon">↑</span><strong>Arraste os arquivos aqui</strong><span>ou clique para escolher</span>
       </div>
       <input id="files" type="file" multiple hidden><div id="lista" class="file-list" aria-live="polite"></div>
       <div id="status" class="status" aria-live="polite">Pronto para receber</div>
+    </section>
+
+    <section id="files-view" class="view" hidden>
+      <div class="section-heading"><h2>Arquivos</h2><p>Navegue no seu espaço pessoal ou na pasta compartilhada.</p></div>
+      <div class="storage-switch" role="group" aria-label="Área de armazenamento">
+        <button class="storage-button active" type="button" data-area="personal">Pessoal</button>
+        <button class="storage-button" type="button" data-area="shared">Compartilhada</button>
+      </div>
+      <div class="explorer-toolbar"><nav id="breadcrumbs" class="breadcrumbs" aria-label="Caminho atual"></nav><button id="use-upload-folder" class="secondary" type="button">Enviar arquivos para cá</button></div>
+      <form id="create-folder-form" class="folder-form">
+        <input id="folder-name" type="text" autocomplete="off" maxlength="255" placeholder="Nome da nova pasta" required>
+        <button class="secondary" type="submit">Criar pasta</button>
+      </form>
+      <div id="files-list" class="browser-files" aria-live="polite"></div>
+      <div id="files-status" class="status" aria-live="polite"></div>
     </section>
 
     <section id="account-view" class="view" hidden>

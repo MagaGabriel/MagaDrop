@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.prefs.Preferences;
 
 public class MagaDrop {
-    private static final String VERSAO = "3.0.0-preview.1";
+    private static final String VERSAO = "3.0.0-preview.2";
     private static final int PORTA_PREFERIDA = 8080;
     private static final long LIMITE_UPLOAD = 2L * 1024 * 1024 * 1024;
     private static final String CHAVE_PASTA = "pastaUploads";
@@ -29,6 +29,7 @@ public class MagaDrop {
     static UserStore usuarios;
     static SessionManager sessoes;
     static LoginRateLimiter tentativasLogin;
+    static StorageService armazenamento;
     static char[] senhaConfiguracaoInicial;
     static boolean rodando;
     static JFrame janela;
@@ -79,6 +80,7 @@ public class MagaDrop {
             }
             if (senhaConfiguracaoInicial != null) Arrays.fill(senhaConfiguracaoInicial, '\0');
             senhaConfiguracaoInicial = null;
+            armazenamento = new StorageService(pastaUploads, pastaDados.resolve("Pessoal"));
             sessoes = new SessionManager();
             tentativasLogin = new LoginRateLimiter();
         }
@@ -113,7 +115,7 @@ public class MagaDrop {
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(4, 4, 10, 4);
         painel.add(new JLabel("Configure o administrador do MagaDrop"), c);
-        c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Salvar arquivos em:"), c);
+        c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Pasta compartilhada:"), c);
         c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(pastaPainel, c);
         c.gridx = 0; c.gridy++; c.weightx = 0; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Senha do administrador:"), c);
         c.gridx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(campoSenha, c);
@@ -225,13 +227,14 @@ public class MagaDrop {
     }
 
     static JPanel criarPainelPasta() {
-        JPanel painel = new JPanel(new BorderLayout(8, 6)); painel.setBorder(BorderFactory.createTitledBorder("Pasta de destino"));
+        JPanel painel = new JPanel(new BorderLayout(8, 6)); painel.setBorder(BorderFactory.createTitledBorder("Pasta compartilhada"));
         pastaLabel = new JLabel(pastaUploads.toString()); pastaLabel.setToolTipText(pastaUploads.toString());
-        JPanel acoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        JButton usuariosButton = new JButton("Usuários"), alterar = new JButton("Alterar pasta"), abrir = new JButton("Abrir pasta"), configuracoes = new JButton("Configurações");
+        JPanel acoes = new JPanel(new GridLayout(0, 3, 6, 6));
+        JButton usuariosButton = new JButton("Usuários"), alterar = new JButton("Alterar compartilhada"), abrir = new JButton("Abrir compartilhada");
+        JButton pessoais = new JButton("Pastas pessoais"), configuracoes = new JButton("Configurações");
         usuariosButton.addActionListener(e -> mostrarUsuarios()); alterar.addActionListener(e -> alterarPasta());
-        abrir.addActionListener(e -> abrirPasta()); configuracoes.addActionListener(e -> mostrarConfiguracoes());
-        acoes.add(usuariosButton); acoes.add(alterar); acoes.add(abrir); acoes.add(configuracoes);
+        abrir.addActionListener(e -> abrirPasta()); pessoais.addActionListener(e -> abrirPastasPessoais()); configuracoes.addActionListener(e -> mostrarConfiguracoes());
+        acoes.add(usuariosButton); acoes.add(alterar); acoes.add(abrir); acoes.add(pessoais); acoes.add(configuracoes);
         painel.add(pastaLabel, BorderLayout.CENTER); painel.add(acoes, BorderLayout.EAST); return painel;
     }
 
@@ -247,6 +250,8 @@ public class MagaDrop {
             server.createContext("/api/session", new AuthHandler(usuarios, sessoes, tentativasLogin));
             server.createContext("/api/account/password", new AccountPasswordHandler(usuarios, sessoes, tentativasLogin));
             server.createContext("/api/users", new UserAdminHandler(usuarios, sessoes, tentativasLogin));
+            server.createContext("/api/files", new FileHandler(armazenamento, sessoes));
+            server.createContext("/api/download", new DownloadHandler(armazenamento, sessoes));
             server.createContext("/upload", new UploadHandler()); server.createContext("/", new PaginaHandler());
             int threads = Math.max(4, Math.min(12, Runtime.getRuntime().availableProcessors() * 2));
             servidorExecutor = Executors.newFixedThreadPool(threads, r -> { Thread t = new Thread(r, "magadrop-http"); t.setDaemon(true); return t; });
@@ -285,14 +290,19 @@ public class MagaDrop {
         catch (Exception e) { log("Erro ao abrir pasta: " + e.getMessage()); }
     }
 
+    static void abrirPastasPessoais() {
+        try { Desktop.getDesktop().open(pastaDados.resolve("Pessoal").toFile()); }
+        catch (Exception e) { log("Erro ao abrir pastas pessoais: " + e.getMessage()); }
+    }
+
     static void alterarPasta() {
         JFileChooser seletor = new JFileChooser(pastaUploads.toFile());
-        seletor.setDialogTitle("Escolha onde salvar os arquivos"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        seletor.setDialogTitle("Escolha a pasta compartilhada"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         seletor.setAcceptAllFileFilterUsed(false);
         if (seletor.showOpenDialog(janela) != JFileChooser.APPROVE_OPTION) return;
         try {
             Path nova = seletor.getSelectedFile().toPath().toAbsolutePath().normalize(); validarPastaDestino(nova);
-            pastaUploads = nova; PREFERENCIAS.put(CHAVE_PASTA, nova.toString()); atualizarInterface();
+            pastaUploads = nova; armazenamento.setSharedRoot(nova); PREFERENCIAS.put(CHAVE_PASTA, nova.toString()); atualizarInterface();
             log("Pasta de destino alterada para " + nova);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(janela, "Não foi possível usar essa pasta:\n" + e.getMessage(), "MagaDrop", JOptionPane.ERROR_MESSAGE);
@@ -312,7 +322,7 @@ public class MagaDrop {
         alterarSenha.addActionListener(e -> alterarSenha());
         restaurarPasta.addActionListener(e -> {
             try {
-                Path padrao = pastaPadrao(); validarPastaDestino(padrao); pastaUploads = padrao;
+                Path padrao = pastaPadrao(); validarPastaDestino(padrao); pastaUploads = padrao; armazenamento.setSharedRoot(padrao);
                 PREFERENCIAS.put(CHAVE_PASTA, padrao.toString()); atualizarInterface();
                 JOptionPane.showMessageDialog(janela, "A pasta padrão foi restaurada.", "MagaDrop", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException ex) { JOptionPane.showMessageDialog(janela, ex.getMessage(), "MagaDrop", JOptionPane.ERROR_MESSAGE); }
@@ -641,32 +651,28 @@ public class MagaDrop {
             if (sessao.isEmpty()) { responder(troca, 401, "Entre no MagaDrop para enviar arquivos"); return; }
             if (!HttpSupport.validCsrf(troca, sessao.get())) { responder(troca, 403, "Confirmação de segurança inválida"); return; }
             String nome = troca.getRequestHeaders().getFirst("X-Filename");
-            if (nome == null || nome.isBlank() || nome.length() > 255 || nome.contains("/") || nome.contains("\\") || nome.equals(".") || nome.equals("..") || nome.chars().anyMatch(c -> c < 32)) {
-                responder(troca, 400, "Nome de arquivo inválido"); return;
-            }
+            try { StorageService.validateName(nome, true); }
+            catch (IllegalArgumentException e) { responder(troca, 400, e.getMessage()); return; }
             long informado = parseLong(troca.getRequestHeaders().getFirst("Content-Length"));
             if (informado > LIMITE_UPLOAD) { responder(troca, 413, "Arquivo excede o limite de 2 GB"); return; }
-            Path destino = reservarDestino(nome); boolean concluido = false;
+            Path destino;
+            StorageService.Area area;
+            try {
+                Map<String, String> query = HttpSupport.readQuery(troca);
+                area = StorageService.Area.parse(query.getOrDefault("area", "shared"));
+                destino = armazenamento.reserveUpload(sessao.get(), area, query.getOrDefault("path", ""), nome);
+            } catch (NoSuchFileException e) { responder(troca, 404, "A pasta de destino não existe"); return; }
+            catch (IllegalArgumentException | HttpSupport.InvalidRequestException e) { responder(troca, 400, e.getMessage()); return; }
+            boolean concluido = false;
             try (InputStream in = troca.getRequestBody(); OutputStream out = Files.newOutputStream(destino)) {
                 byte[] buffer = new byte[64 * 1024]; long total = 0; int lidos;
                 while ((lidos = in.read(buffer)) != -1) { total += lidos; if (total > LIMITE_UPLOAD) throw new UploadMuitoGrandeException(); out.write(buffer, 0, lidos); }
-                concluido = true; log("Recebido por " + sessao.get().username() + ": " + destino.getFileName() + " (" + total + " bytes)"); responder(troca, 201, destino.getFileName().toString());
+                concluido = true; log("Recebido por " + sessao.get().username() + " em " + area.apiName() + ": " + destino.getFileName() + " (" + total + " bytes)"); responder(troca, 201, destino.getFileName().toString());
             } catch (UploadMuitoGrandeException e) { responder(troca, 413, "Arquivo excede o limite de 2 GB"); }
             catch (IOException e) { log("Erro ao receber " + nome + ": " + e.getMessage()); try { responder(troca, 500, "Não foi possível salvar o arquivo"); } catch (IOException ignored) {} }
             finally { if (!concluido) Files.deleteIfExists(destino); }
         }
         private static long parseLong(String valor) { if (valor == null) return -1; try { return Long.parseLong(valor); } catch (NumberFormatException e) { return -1; } }
-        private static Path reservarDestino(String nome) throws IOException {
-            Path raiz = pastaUploads;
-            String base = nome, ext = ""; int ponto = nome.lastIndexOf('.');
-            if (ponto > 0) { base = nome.substring(0, ponto); ext = nome.substring(ponto); }
-            for (int i = 0; i < 10_000; i++) {
-                String candidato = i == 0 ? nome : base + " (" + i + ")" + ext; Path destino = raiz.resolve(candidato).normalize();
-                if (!destino.startsWith(raiz)) throw new IOException("Destino inválido");
-                try { return Files.createFile(destino); } catch (FileAlreadyExistsException ignored) {}
-            }
-            throw new IOException("Muitos arquivos com o mesmo nome");
-        }
     }
     static class UploadMuitoGrandeException extends IOException { private static final long serialVersionUID = 1L; }
 }

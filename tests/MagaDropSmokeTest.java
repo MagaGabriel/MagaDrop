@@ -26,6 +26,7 @@ public class MagaDropSmokeTest {
         Path temporary = Files.createTempDirectory("magadrop-smoke-");
         try {
             configure(temporary);
+            testInitialFolderSelection(temporary);
             testPasswordProtection(temporary);
             testUsers();
             testSessions();
@@ -39,6 +40,15 @@ public class MagaDropSmokeTest {
                 items.sorted(Comparator.reverseOrder()).forEach(path -> { try { Files.deleteIfExists(path); } catch (Exception ignored) {} });
             }
         }
+    }
+
+    private static void testInitialFolderSelection(Path temporary) {
+        boolean missingSelectionRejected = false;
+        try { MagaDrop.validarSelecaoPastaInicial(temporary.toString(), false); }
+        catch (IllegalArgumentException e) { missingSelectionRejected = true; }
+        check(missingSelectionRejected, "primeira instalação exige escolha explícita da pasta base");
+        Path selected = MagaDrop.validarSelecaoPastaInicial(temporary.toString(), true);
+        check(selected.equals(temporary.toAbsolutePath().normalize()), "pasta base escolhida é normalizada");
     }
 
     private static void configure(Path temporary) throws Exception {

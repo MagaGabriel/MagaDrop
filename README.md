@@ -15,7 +15,13 @@ Aplicativo Windows para enviar, organizar e baixar arquivos de celulares e outro
 
 Ao fechar a janela no Windows, o MagaDrop continua funcionando na bandeja do sistema. Use **Sair** no ícone da bandeja quando quiser realmente encerrar o servidor.
 
-Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pasta pode ser alterada depois na janela principal.
+Na primeira execução de uma instalação nova, é obrigatório usar o botão **Escolher...** para selecionar a pasta base onde os arquivos serão salvos. O MagaDrop cria dentro dela as pastas `Compartilhada` e `Usuarios`. A pasta base pode ser alterada depois na janela principal.
+
+## Compartilhar com outra pessoa
+
+Para apenas instalar o MagaDrop em outro computador, envie o arquivo `output\MagaDropSetup-v3-preview.exe`. Na primeira abertura, a pessoa escolherá a pasta base dela e criará a senha da conta `MAGA`; seus usuários, senhas e arquivos não são enviados junto com o instalador.
+
+Para a pessoa também colaborar no código de um repositório privado, adicione a conta dela como colaboradora no GitHub em **Settings > Collaborators > Add people**. Depois que ela aceitar o convite, poderá clonar a branch `codex/v3-contas-sessoes` e trabalhar no projeto.
 
 ## Fundação de segurança da versão 3
 

@@ -33,7 +33,7 @@ Na primeira abertura da versão 3:
 3. É criada a conta `MAGA` com essa senha.
 4. A senha legível é removida das preferências antigas.
 
-Se for uma instalação nova, a configuração inicial exige uma senha ou frase-senha entre 10 e 128 caracteres.
+Se for uma instalação nova, a configuração inicial exige uma senha ou frase-senha entre 10 e 128 caracteres e obriga a escolha explícita da pasta base. Dentro dela, o MagaDrop cria `Compartilhada` e `Usuarios`.
 
 ## Marco 2: administração de usuários
 

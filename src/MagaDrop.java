@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.prefs.Preferences;
 
 public class MagaDrop {
-    private static final String VERSAO = "3.0.0-preview.3";
+    private static final String VERSAO = "3.0.0-preview.4";
     private static final int PORTA_PREFERIDA = 8080;
     private static final long LIMITE_UPLOAD = 2L * 1024 * 1024 * 1024;
     private static final String CHAVE_PASTA_RAIZ = "pastaRaiz";
@@ -113,11 +113,16 @@ public class MagaDrop {
     }
 
     static boolean mostrarConfiguracaoInicial() {
-        JTextField campoPasta = new JTextField(pastaRaiz.toString(), 34);
+        JTextField campoPasta = new JTextField("", 34);
+        campoPasta.setEditable(false);
+        campoPasta.setToolTipText("Escolha a pasta base onde o MagaDrop salvará todos os arquivos.");
         JPasswordField campoSenha = new JPasswordField(18), confirmarSenha = new JPasswordField(18);
         JCheckBox iniciarWindows = new JCheckBox("Iniciar o MagaDrop junto com o Windows");
         JButton escolher = new JButton("Escolher...");
-        escolher.addActionListener(e -> escolherPasta(campoPasta));
+        boolean[] pastaEscolhida = {false};
+        escolher.addActionListener(e -> {
+            if (escolherPasta(campoPasta)) pastaEscolhida[0] = true;
+        });
 
         JPanel pastaPainel = new JPanel(new BorderLayout(6, 0));
         pastaPainel.add(campoPasta, BorderLayout.CENTER); pastaPainel.add(escolher, BorderLayout.EAST);
@@ -125,6 +130,8 @@ public class MagaDrop {
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(4, 4, 10, 4);
         painel.add(new JLabel("Configure o administrador do MagaDrop"), c);
+        c.gridy++; c.insets = new Insets(4, 4, 10, 4);
+        painel.add(new JLabel("Escolha a pasta base. Dentro dela serão criadas as pastas Compartilhada e Usuarios."), c);
         c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Pasta principal:"), c);
         c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(pastaPainel, c);
         c.gridx = 0; c.gridy++; c.weightx = 0; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Senha do administrador:"), c);
@@ -143,7 +150,7 @@ public class MagaDrop {
             try {
                 if (!senha.equals(confirmacao)) throw new IllegalArgumentException("As senhas não são iguais.");
                 PasswordHasher.validateNewPassword(senha);
-                Path pasta = Paths.get(campoPasta.getText().trim()).toAbsolutePath().normalize();
+                Path pasta = validarSelecaoPastaInicial(campoPasta.getText(), pastaEscolhida[0]);
                 validarPastaRaiz(pasta);
                 if (iniciarWindows.isSelected()) configurarInicioWindows(true);
                 pastaRaiz = pasta; atualizarPastasDaRaiz(); senhaConfiguracaoInicial = senha.toCharArray();
@@ -328,11 +335,21 @@ public class MagaDrop {
         }
     }
 
-    static void escolherPasta(JTextField destino) {
-        JFileChooser seletor = new JFileChooser(destino.getText());
-        seletor.setDialogTitle("Escolha onde salvar os arquivos"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    static boolean escolherPasta(JTextField destino) {
+        String caminhoAtual = destino.getText().trim();
+        JFileChooser seletor = caminhoAtual.isBlank() ? new JFileChooser(pastaRaiz.toFile()) : new JFileChooser(caminhoAtual);
+        seletor.setDialogTitle("Escolha a pasta base do MagaDrop"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         seletor.setAcceptAllFileFilterUsed(false);
-        if (seletor.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) destino.setText(seletor.getSelectedFile().getAbsolutePath());
+        if (seletor.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) return false;
+        destino.setText(seletor.getSelectedFile().getAbsolutePath());
+        return true;
+    }
+
+    static Path validarSelecaoPastaInicial(String caminho, boolean escolhidaExplicitamente) {
+        if (!escolhidaExplicitamente || caminho == null || caminho.isBlank())
+            throw new IllegalArgumentException("Escolha a pasta base usando o botão Escolher...");
+        try { return Paths.get(caminho.trim()).toAbsolutePath().normalize(); }
+        catch (InvalidPathException e) { throw new IllegalArgumentException("O caminho escolhido não é válido."); }
     }
 
     static void mostrarConfiguracoes() {

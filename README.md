@@ -8,7 +8,7 @@ Aplicativo Windows para enviar, organizar e baixar arquivos de celulares e outro
 
 1. Abra o MagaDrop no computador e aguarde o servidor iniciar.
 2. No celular, conectado à mesma rede Wi-Fi, leia o QR code ou abra o endereço exibido.
-3. Entre com o usuário `admin` e a senha configurada no aplicativo do computador.
+3. Entre com o usuário `MAGA` e a senha configurada no aplicativo do computador.
 4. Escolha uma pasta em **Pessoal** ou **Compartilhada** e selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
 5. Abra **Arquivos** para criar pastas, navegar, baixar itens no celular ou enviá-los para a lixeira.
 6. No Windows, use **Abrir compartilhada** ou **Pastas pessoais** para acessar os arquivos diretamente.
@@ -20,7 +20,8 @@ Na primeira execução, o usuário escolhe onde os arquivos serão salvos. A pas
 ## Fundação de segurança da versão 3
 
 - A senha da conta é protegida com PBKDF2-HMAC-SHA-256, salt aleatório e 600 mil iterações.
-- A senha legada da versão 2 é migrada para a conta `admin` e removida das preferências do Windows.
+- A senha legada da versão 2 é migrada para a conta `MAGA` e removida das preferências do Windows.
+- A pasta principal contém `Compartilhada` e `Usuarios`; neste computador, o padrão é `D:\backup nuvem`.
 - O navegador utiliza uma sessão aleatória de 256 bits em cookie `HttpOnly` e `SameSite=Strict`.
 - Operações de escrita exigem também um token contra requisições forjadas (CSRF).
 - Cinco falhas de login consecutivas bloqueiam novas tentativas por um minuto.

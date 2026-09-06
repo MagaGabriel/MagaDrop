@@ -59,6 +59,27 @@ final class UserStore {
         return create(username, displayName, password, UserRole.MEMBER, true);
     }
 
+    synchronized UserAccount renameInitialAdmin(String username, String displayName) throws IOException {
+        UserAccount current = initialAdmin();
+        String normalized = UserAccount.normalizeUsername(username);
+        UserAccount.validateDisplayName(displayName);
+        UserAccount conflicting = byUsername.get(normalized);
+        if (conflicting != null && !conflicting.id().equals(current.id()))
+            throw new IllegalArgumentException("Esse nome de usuário já existe.");
+        if (current.username().equals(normalized) && current.displayName().equals(displayName.trim())) return current;
+        UserAccount updated = new UserAccount(current.id(), normalized, displayName.trim(), current.passwordHash(),
+                current.role(), current.enabled(), current.createdAtEpochMillis());
+        byUsername.remove(current.username());
+        byUsername.put(updated.username(), updated);
+        try { save(); }
+        catch (IOException e) {
+            byUsername.remove(updated.username());
+            byUsername.put(current.username(), current);
+            throw e;
+        }
+        return updated;
+    }
+
     synchronized void changePassword(String username, String newPassword) throws IOException {
         PasswordHasher.validateNewPassword(newPassword);
         UserAccount current = find(username).orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));

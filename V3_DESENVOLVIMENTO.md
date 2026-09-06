@@ -10,7 +10,7 @@ Implementado nesta branch:
 
 - cadastro local versionado de usuários;
 - perfis `ADMIN` e `MEMBER`;
-- migração automática da senha da versão 2 para a conta `admin`;
+- migração automática da senha da versão 2 para a conta `MAGA`;
 - senhas protegidas com PBKDF2-HMAC-SHA-256, salt aleatório e 600 mil iterações;
 - sessões aleatórias de 256 bits, mantidas somente na memória do servidor;
 - cookies `HttpOnly` e `SameSite=Strict`;
@@ -30,7 +30,7 @@ Na primeira abertura da versão 3:
 
 1. A pasta de uploads continua sendo utilizada.
 2. A senha configurada na versão 2 é transformada em hash.
-3. É criada a conta `admin` com essa senha.
+3. É criada a conta `MAGA` com essa senha.
 4. A senha legível é removida das preferências antigas.
 
 Se for uma instalação nova, a configuração inicial exige uma senha ou frase-senha entre 10 e 128 caracteres.
@@ -68,7 +68,7 @@ Implementado:
 - bloqueio de travessia de diretório, links simbólicos e junções;
 - testes de isolamento entre contas e de todas as operações de arquivo.
 
-A pasta compartilhada continua sendo o destino configurado nas versões anteriores. As pastas pessoais ficam em `%LOCALAPPDATA%\MagaDrop\Pessoal`. A proteção é aplicada pelo servidor do MagaDrop; contas do próprio Windows com acesso ao disco continuam sujeitas às permissões do sistema operacional.
+A pasta principal escolhida no aplicativo contém `Compartilhada` e `Usuarios`. Neste computador, o padrão é `D:\backup nuvem`, portanto os caminhos são `D:\backup nuvem\Compartilhada` e `D:\backup nuvem\Usuarios`. A proteção é aplicada pelo servidor do MagaDrop; contas do próprio Windows com acesso ao disco continuam sujeitas às permissões do sistema operacional.
 
 ## Próximo marco
 

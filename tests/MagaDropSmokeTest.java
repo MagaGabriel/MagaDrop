@@ -46,7 +46,7 @@ public class MagaDropSmokeTest {
         MagaDrop.pastaUploads = temporary.resolve("uploads");
         Files.createDirectories(MagaDrop.pastaUploads);
         MagaDrop.usuarios = new UserStore(temporary.resolve("data/users.properties"));
-        MagaDrop.usuarios.createInitialAdmin("admin", "Administrador", PASSWORD);
+        MagaDrop.usuarios.createInitialAdmin("MAGA", "MAGA", PASSWORD);
         MagaDrop.armazenamento = new StorageService(MagaDrop.pastaUploads, temporary.resolve("data/Pessoal"));
         MagaDrop.sessoes = new SessionManager();
         MagaDrop.tentativasLogin = new LoginRateLimiter();
@@ -56,11 +56,13 @@ public class MagaDropSmokeTest {
         String persisted = Files.readString(temporary.resolve("data/users.properties"));
         check(!persisted.contains(PASSWORD), "senha não armazenada em texto legível");
         check(persisted.contains("pbkdf2-sha256"), "hash PBKDF2 persistido");
-        check(MagaDrop.usuarios.authenticate("admin", PASSWORD).isPresent(), "senha correta autenticada");
-        check(MagaDrop.usuarios.authenticate("admin", "senha errada").isEmpty(), "senha incorreta rejeitada");
+        check(MagaDrop.usuarios.authenticate("MAGA", PASSWORD).isPresent(), "senha correta autenticada");
+        check(MagaDrop.usuarios.authenticate("MAGA", "senha errada").isEmpty(), "senha incorreta rejeitada");
         UserStore migrated = new UserStore(temporary.resolve("legacy/users.properties"));
         migrated.createInitialAdmin("admin", "Administrador", "1234");
-        check(migrated.authenticate("admin", "1234").isPresent(), "senha curta legada continua válida após migração");
+        UserAccount renamed = migrated.renameInitialAdmin("MAGA", "MAGA");
+        check(renamed.username().equals("maga") && renamed.displayName().equals("MAGA"), "administrador legado renomeado");
+        check(migrated.authenticate("MAGA", "1234").isPresent(), "senha curta legada continua válida após migração");
         check(!Files.readString(temporary.resolve("legacy/users.properties")).contains("1234"), "senha legada também vira hash");
     }
 
@@ -78,13 +80,13 @@ public class MagaDropSmokeTest {
         catch (IllegalArgumentException e) { weakPasswordRejected = true; }
         check(weakPasswordRejected, "senha fraca de novo membro rejeitada");
         boolean adminDisableRejected = false;
-        try { MagaDrop.usuarios.setEnabled("admin", false); }
+        try { MagaDrop.usuarios.setEnabled("MAGA", false); }
         catch (IllegalArgumentException e) { adminDisableRejected = true; }
         check(adminDisableRejected, "administrador principal não pode ser desativado");
         boolean adminDeleteRejected = false;
-        try { MagaDrop.usuarios.deleteMember("admin"); }
+        try { MagaDrop.usuarios.deleteMember("MAGA"); }
         catch (IllegalArgumentException e) { adminDeleteRejected = true; }
-        check(adminDeleteRejected && MagaDrop.usuarios.find("admin").isPresent(), "administrador principal não pode ser excluído");
+        check(adminDeleteRejected && MagaDrop.usuarios.find("MAGA").isPresent(), "administrador principal não pode ser excluído");
     }
 
     private static void testSessions() {
@@ -129,9 +131,9 @@ public class MagaDropSmokeTest {
             check(anonymousSession.statusCode() == 401, "sessão anônima rejeitada");
             check(upload(client, base, "teste.txt", null, null).statusCode() == 401, "upload sem sessão rejeitado");
 
-            HttpResponse<String> invalidLogin = login(client, base, "admin", "senha errada");
+            HttpResponse<String> invalidLogin = login(client, base, "MAGA", "senha errada");
             check(invalidLogin.statusCode() == 401, "login inválido rejeitado");
-            HttpResponse<String> validLogin = login(client, base, "admin", PASSWORD);
+            HttpResponse<String> validLogin = login(client, base, "MAGA", PASSWORD);
             check(validLogin.statusCode() == 200, "login válido aceito");
             String cookie = validLogin.headers().firstValue("Set-Cookie").orElseThrow().split(";", 2)[0];
             String csrf = jsonField(validLogin.body(), "csrfToken");
@@ -211,9 +213,9 @@ public class MagaDropSmokeTest {
         check(upload(client, base, "excluido.txt", child.cookie(), child.csrf()).statusCode() == 401, "exclusão encerra sessões do membro");
         check(login(client, base, "filho", "Senha inicial do filho 789!").statusCode() == 401, "membro excluído não entra");
 
-        Map<String, String> deleteAdmin = action("delete", "admin"); deleteAdmin.put("confirmation", "admin");
+        Map<String, String> deleteAdmin = action("delete", "MAGA"); deleteAdmin.put("confirmation", "maga");
         check(adminAction(client, base, adminCookie, adminCsrf, deleteAdmin).statusCode() == 400, "API não exclui administrador principal");
-        check(MagaDrop.usuarios.find("admin").isPresent(), "administrador permanece cadastrado");
+        check(MagaDrop.usuarios.find("MAGA").isPresent(), "administrador permanece cadastrado");
     }
 
     private static void testFileManagement(HttpClient client, URI base, String adminCookie, String adminCsrf, Path temporary) throws Exception {

@@ -1,13 +1,13 @@
 [Setup]
 AppId={{2D94447B-C613-46E8-AE35-23DA76DE965B}
 AppName=MagaDrop
-AppVersion=3.0.0-preview.2
-AppVerName=MagaDrop 3 Preview
+AppVersion=3.0.0-preview.3
+AppVerName=MagaDrop 3 Preview 3
 AppPublisher=MagaDrop
-VersionInfoVersion=3.0.0.2
-VersionInfoProductVersion=3.0.0.2
+VersionInfoVersion=3.0.0.3
+VersionInfoProductVersion=3.0.0.3
 DefaultDirName={localappdata}\Programs\MagaDrop
-DefaultGroupName=MagaDrop 3 Preview
+DefaultGroupName=MagaDrop
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 WizardStyle=modern
@@ -28,8 +28,12 @@ Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs creat
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"; Flags: checkedonce
 
 [Icons]
-Name: "{autoprograms}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"
-Name: "{autodesktop}\MagaDrop 3 Preview"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"; Tasks: desktopicon
+Name: "{autoprograms}\MagaDrop"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"
+Name: "{autodesktop}\MagaDrop"; Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; IconFilename: "{app}\file.ico"; Tasks: desktopicon
+
+[InstallDelete]
+Type: files; Name: "{autoprograms}\MagaDrop 3 Preview.lnk"
+Type: files; Name: "{autodesktop}\MagaDrop 3 Preview.lnk"
 
 [Run]
-Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Description: "Abrir MagaDrop 3 Preview"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MagaDrop.exe"; WorkingDir: "{app}"; Description: "Abrir MagaDrop"; Flags: nowait postinstall skipifsilent

@@ -13,10 +13,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.prefs.Preferences;
 
 public class MagaDrop {
-    private static final String VERSAO = "3.0.0-preview.2";
+    private static final String VERSAO = "3.0.0-preview.3";
     private static final int PORTA_PREFERIDA = 8080;
     private static final long LIMITE_UPLOAD = 2L * 1024 * 1024 * 1024;
-    private static final String CHAVE_PASTA = "pastaUploads";
+    private static final String CHAVE_PASTA_RAIZ = "pastaRaiz";
     private static final String CHAVE_SENHA = "senhaAcesso";
     private static final String CHAVE_INICIAR_WINDOWS = "iniciarComWindows";
     private static final Preferences PREFERENCIAS = Preferences.userNodeForPackage(MagaDrop.class);
@@ -25,7 +25,7 @@ public class MagaDrop {
     static ExecutorService servidorExecutor;
     static String ip = "localhost", baseDir;
     static int porta = PORTA_PREFERIDA;
-    static Path pastaUploads, pastaWeb, pastaDados;
+    static Path pastaRaiz, pastaUploads, pastaUsuarios, pastaWeb, pastaDados;
     static UserStore usuarios;
     static SessionManager sessoes;
     static LoginRateLimiter tentativasLogin;
@@ -60,9 +60,10 @@ public class MagaDrop {
         pastaWeb = Paths.get(baseDir, "web").toAbsolutePath().normalize();
         pastaDados = pastaDados();
         Path padrao = pastaPadrao();
-        String salva = PREFERENCIAS.get(CHAVE_PASTA, "");
-        try { pastaUploads = salva.isBlank() ? padrao : Paths.get(salva).toAbsolutePath().normalize(); }
-        catch (InvalidPathException e) { pastaUploads = padrao; }
+        String salva = PREFERENCIAS.get(CHAVE_PASTA_RAIZ, "");
+        try { pastaRaiz = salva.isBlank() ? padrao : Paths.get(salva).toAbsolutePath().normalize(); }
+        catch (InvalidPathException e) { pastaRaiz = padrao; }
+        atualizarPastasDaRaiz();
         String senhaLegada = PREFERENCIAS.get(CHAVE_SENHA, "");
         try {
             usuarios = new UserStore(pastaDados.resolve("users.properties"));
@@ -70,17 +71,19 @@ public class MagaDrop {
                 if (!mostrarConfiguracaoInicial()) { System.exit(0); return false; }
                 senhaLegada = new String(senhaConfiguracaoInicial);
             }
-            validarPastaDestino(pastaUploads);
+            validarPastaRaiz(pastaRaiz);
             migrarUploadsLegados();
             if (usuarios.isEmpty()) {
-                usuarios.createInitialAdmin("admin", "Administrador", senhaLegada);
+                usuarios.createInitialAdmin("MAGA", "MAGA", senhaLegada);
                 PREFERENCIAS.remove(CHAVE_SENHA);
             } else if (!senhaLegada.isBlank()) {
                 PREFERENCIAS.remove(CHAVE_SENHA);
             }
+            usuarios.renameInitialAdmin("MAGA", "MAGA");
             if (senhaConfiguracaoInicial != null) Arrays.fill(senhaConfiguracaoInicial, '\0');
             senhaConfiguracaoInicial = null;
-            armazenamento = new StorageService(pastaUploads, pastaDados.resolve("Pessoal"));
+            armazenamento = new StorageService(pastaUploads, pastaUsuarios);
+            for (UserAccount conta : usuarios.list()) armazenamento.ensurePersonalRoot(conta);
             sessoes = new SessionManager();
             tentativasLogin = new LoginRateLimiter();
         }
@@ -99,11 +102,18 @@ public class MagaDrop {
     }
 
     static Path pastaPadrao() {
-        return pastaDados().resolve("uploads").toAbsolutePath().normalize();
+        Path preferida = Paths.get("D:\\backup nuvem").toAbsolutePath().normalize();
+        if (Files.isDirectory(preferida)) return preferida;
+        return Paths.get(System.getProperty("user.home"), "MagaDrop").toAbsolutePath().normalize();
+    }
+
+    static void atualizarPastasDaRaiz() {
+        pastaUploads = pastaRaiz.resolve("Compartilhada").toAbsolutePath().normalize();
+        pastaUsuarios = pastaRaiz.resolve("Usuarios").toAbsolutePath().normalize();
     }
 
     static boolean mostrarConfiguracaoInicial() {
-        JTextField campoPasta = new JTextField(pastaUploads.toString(), 34);
+        JTextField campoPasta = new JTextField(pastaRaiz.toString(), 34);
         JPasswordField campoSenha = new JPasswordField(18), confirmarSenha = new JPasswordField(18);
         JCheckBox iniciarWindows = new JCheckBox("Iniciar o MagaDrop junto com o Windows");
         JButton escolher = new JButton("Escolher...");
@@ -115,7 +125,7 @@ public class MagaDrop {
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0; c.gridy = 0; c.gridwidth = 2; c.anchor = GridBagConstraints.WEST; c.insets = new Insets(4, 4, 10, 4);
         painel.add(new JLabel("Configure o administrador do MagaDrop"), c);
-        c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Pasta compartilhada:"), c);
+        c.gridy++; c.gridwidth = 1; c.insets = new Insets(4, 4, 4, 8); painel.add(new JLabel("Pasta principal:"), c);
         c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(pastaPainel, c);
         c.gridx = 0; c.gridy++; c.weightx = 0; c.fill = GridBagConstraints.NONE; painel.add(new JLabel("Senha do administrador:"), c);
         c.gridx = 1; c.fill = GridBagConstraints.HORIZONTAL; painel.add(campoSenha, c);
@@ -134,9 +144,9 @@ public class MagaDrop {
                 if (!senha.equals(confirmacao)) throw new IllegalArgumentException("As senhas não são iguais.");
                 PasswordHasher.validateNewPassword(senha);
                 Path pasta = Paths.get(campoPasta.getText().trim()).toAbsolutePath().normalize();
-                validarPastaDestino(pasta);
+                validarPastaRaiz(pasta);
                 if (iniciarWindows.isSelected()) configurarInicioWindows(true);
-                pastaUploads = pasta; senhaConfiguracaoInicial = senha.toCharArray();
+                pastaRaiz = pasta; atualizarPastasDaRaiz(); senhaConfiguracaoInicial = senha.toCharArray();
                 salvarPreferencias();
                 return true;
             } catch (Exception e) {
@@ -146,7 +156,12 @@ public class MagaDrop {
     }
 
     static void migrarUploadsLegados() throws IOException {
-        Path antiga = Paths.get(baseDir, "uploads").toAbsolutePath().normalize();
+        Files.createDirectories(pastaUploads);
+        copiarArquivosLegados(Paths.get(baseDir, "uploads").toAbsolutePath().normalize());
+        copiarArquivosLegados(pastaDados.resolve("uploads").toAbsolutePath().normalize());
+    }
+
+    static void copiarArquivosLegados(Path antiga) throws IOException {
         if (antiga.equals(pastaUploads) || !Files.isDirectory(antiga)) return;
         try (DirectoryStream<Path> arquivos = Files.newDirectoryStream(antiga)) {
             for (Path origem : arquivos) {
@@ -229,10 +244,10 @@ public class MagaDrop {
     }
 
     static JPanel criarPainelPasta() {
-        JPanel painel = new JPanel(new BorderLayout(8, 6)); painel.setBorder(BorderFactory.createTitledBorder("Pasta compartilhada"));
-        pastaLabel = new JLabel(pastaUploads.toString()); pastaLabel.setToolTipText(pastaUploads.toString());
+        JPanel painel = new JPanel(new BorderLayout(8, 6)); painel.setBorder(BorderFactory.createTitledBorder("Pasta principal"));
+        pastaLabel = new JLabel(pastaRaiz.toString()); pastaLabel.setToolTipText(pastaRaiz.toString());
         JPanel acoes = new JPanel(new GridLayout(0, 3, 6, 6));
-        JButton usuariosButton = new JButton("Usuários"), alterar = new JButton("Alterar compartilhada"), abrir = new JButton("Abrir compartilhada");
+        JButton usuariosButton = new JButton("Usuários"), alterar = new JButton("Alterar pasta principal"), abrir = new JButton("Abrir compartilhada");
         JButton pessoais = new JButton("Pastas pessoais"), configuracoes = new JButton("Configurações");
         usuariosButton.addActionListener(e -> mostrarUsuarios()); alterar.addActionListener(e -> alterarPasta());
         abrir.addActionListener(e -> abrirPasta()); pessoais.addActionListener(e -> abrirPastasPessoais()); configuracoes.addActionListener(e -> mostrarConfiguracoes());
@@ -293,19 +308,21 @@ public class MagaDrop {
     }
 
     static void abrirPastasPessoais() {
-        try { Desktop.getDesktop().open(pastaDados.resolve("Pessoal").toFile()); }
+        try { Desktop.getDesktop().open(pastaUsuarios.toFile()); }
         catch (Exception e) { log("Erro ao abrir pastas pessoais: " + e.getMessage()); }
     }
 
     static void alterarPasta() {
-        JFileChooser seletor = new JFileChooser(pastaUploads.toFile());
-        seletor.setDialogTitle("Escolha a pasta compartilhada"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        JFileChooser seletor = new JFileChooser(pastaRaiz.toFile());
+        seletor.setDialogTitle("Escolha a pasta principal do MagaDrop"); seletor.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         seletor.setAcceptAllFileFilterUsed(false);
         if (seletor.showOpenDialog(janela) != JFileChooser.APPROVE_OPTION) return;
         try {
-            Path nova = seletor.getSelectedFile().toPath().toAbsolutePath().normalize(); validarPastaDestino(nova);
-            pastaUploads = nova; armazenamento.setSharedRoot(nova); PREFERENCIAS.put(CHAVE_PASTA, nova.toString()); atualizarInterface();
-            log("Pasta de destino alterada para " + nova);
+            Path nova = seletor.getSelectedFile().toPath().toAbsolutePath().normalize(); validarPastaRaiz(nova);
+            pastaRaiz = nova; atualizarPastasDaRaiz(); armazenamento.setRoots(pastaUploads, pastaUsuarios);
+            for (UserAccount conta : usuarios.list()) armazenamento.ensurePersonalRoot(conta);
+            salvarPreferencias(); atualizarInterface();
+            log("Pasta principal alterada para " + nova);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(janela, "Não foi possível usar essa pasta:\n" + e.getMessage(), "MagaDrop", JOptionPane.ERROR_MESSAGE);
         }
@@ -324,8 +341,10 @@ public class MagaDrop {
         alterarSenha.addActionListener(e -> alterarSenha());
         restaurarPasta.addActionListener(e -> {
             try {
-                Path padrao = pastaPadrao(); validarPastaDestino(padrao); pastaUploads = padrao; armazenamento.setSharedRoot(padrao);
-                PREFERENCIAS.put(CHAVE_PASTA, padrao.toString()); atualizarInterface();
+                Path padrao = pastaPadrao(); validarPastaRaiz(padrao); pastaRaiz = padrao; atualizarPastasDaRaiz();
+                armazenamento.setRoots(pastaUploads, pastaUsuarios);
+                for (UserAccount conta : usuarios.list()) armazenamento.ensurePersonalRoot(conta);
+                salvarPreferencias(); atualizarInterface();
                 JOptionPane.showMessageDialog(janela, "A pasta padrão foi restaurada.", "MagaDrop", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException ex) { JOptionPane.showMessageDialog(janela, ex.getMessage(), "MagaDrop", JOptionPane.ERROR_MESSAGE); }
         });
@@ -396,6 +415,7 @@ public class MagaDrop {
             if (!nova.equals(new String(confirmar.getPassword()))) throw new IllegalArgumentException("As senhas não são iguais.");
             verificarAdministrador(new String(senhaAdmin.getPassword()));
             UserAccount criada = usuarios.createMember(usuario.getText(), nome.getText(), nova);
+            armazenamento.ensurePersonalRoot(criada);
             atualizar.run(); log("Usuário criado no computador: " + criada.username());
         } catch (Exception e) { mostrarErroUsuario(parent, e); }
     }
@@ -513,15 +533,17 @@ public class MagaDrop {
         PasswordHasher.validateNewPassword(senha);
     }
 
-    static void validarPastaDestino(Path pasta) throws IOException {
+    static void validarPastaRaiz(Path pasta) throws IOException {
         Files.createDirectories(pasta);
         if (!Files.isDirectory(pasta)) throw new IOException("O caminho escolhido não é uma pasta.");
         Path teste = Files.createTempFile(pasta, ".magadrop-", ".tmp");
         Files.deleteIfExists(teste);
+        Files.createDirectories(pasta.resolve("Compartilhada"));
+        Files.createDirectories(pasta.resolve("Usuarios"));
     }
 
     static void salvarPreferencias() {
-        PREFERENCIAS.put(CHAVE_PASTA, pastaUploads.toString());
+        PREFERENCIAS.put(CHAVE_PASTA_RAIZ, pastaRaiz.toString());
     }
 
     static void configurarInicioWindows(boolean ativar) throws IOException, InterruptedException {
@@ -552,9 +574,9 @@ public class MagaDrop {
         if (statusLabel == null) return;
         statusLabel.setText(rodando ? "● Pronto para receber" : "● Servidor parado");
         statusLabel.setForeground(rodando ? new Color(22, 130, 72) : new Color(170, 55, 55));
-        enderecoLabel.setText(enderecoServidor()); pastaLabel.setText(pastaUploads.toString()); pastaLabel.setToolTipText(pastaUploads.toString());
+        enderecoLabel.setText(enderecoServidor()); pastaLabel.setText(pastaRaiz.toString()); pastaLabel.setToolTipText(pastaRaiz.toString());
         iniciarButton.setEnabled(!rodando); pararButton.setEnabled(rodando);
-        if (usuarioLabel != null && usuarios != null) usuarioLabel.setText(usuarios.initialAdmin().username() + "  •  administrador");
+        if (usuarioLabel != null && usuarios != null) usuarioLabel.setText(usuarios.initialAdmin().displayName() + "  •  administrador");
         qrPanel.setConteudo(rodando ? enderecoServidor() : null);
     }
 

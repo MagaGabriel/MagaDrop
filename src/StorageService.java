@@ -18,7 +18,7 @@ import java.util.UUID;
 final class StorageService {
     private static final String TRASH_DIRECTORY = ".magadrop-trash";
     private volatile Path sharedRoot;
-    private final Path personalBase;
+    private volatile Path personalBase;
 
     enum Area {
         PERSONAL("personal"), SHARED("shared");
@@ -34,20 +34,29 @@ final class StorageService {
     record Entry(String name, boolean directory, long size, long modifiedAtEpochMillis) {}
 
     StorageService(Path sharedRoot, Path personalBase) throws IOException {
-        this.personalBase = personalBase.toAbsolutePath().normalize();
-        setSharedRoot(sharedRoot);
-        Files.createDirectories(this.personalBase);
+        setRoots(sharedRoot, personalBase);
     }
 
-    synchronized void setSharedRoot(Path root) throws IOException {
-        Path normalized = root.toAbsolutePath().normalize();
-        Files.createDirectories(normalized);
-        if (!Files.isDirectory(normalized) || Files.isSymbolicLink(normalized))
+    synchronized void setRoots(Path newSharedRoot, Path newPersonalBase) throws IOException {
+        Path normalizedShared = newSharedRoot.toAbsolutePath().normalize();
+        Path normalizedPersonal = newPersonalBase.toAbsolutePath().normalize();
+        Files.createDirectories(normalizedShared);
+        Files.createDirectories(normalizedPersonal);
+        if (!Files.isDirectory(normalizedShared) || Files.isSymbolicLink(normalizedShared))
             throw new IOException("A pasta compartilhada não é válida.");
-        sharedRoot = normalized;
+        if (!Files.isDirectory(normalizedPersonal) || Files.isSymbolicLink(normalizedPersonal))
+            throw new IOException("A pasta de usuários não é válida.");
+        sharedRoot = normalizedShared;
+        personalBase = normalizedPersonal;
     }
 
     Path sharedRoot() { return sharedRoot; }
+
+    Path personalBase() { return personalBase; }
+
+    void ensurePersonalRoot(UserAccount account) throws IOException {
+        Files.createDirectories(personalBase.resolve(personalDirectoryName(account.username(), account.id())));
+    }
 
     List<Entry> list(SessionManager.Session session, Area area, String rawPath) throws IOException {
         Path directory = resolve(session, area, rawPath, true);
@@ -144,8 +153,12 @@ final class StorageService {
     }
 
     private static String personalDirectoryName(SessionManager.Session session) {
-        String id = session.userId().replaceAll("[^a-zA-Z0-9]", "");
-        return session.username() + "-" + id.substring(0, Math.min(8, id.length()));
+        return personalDirectoryName(session.username(), session.userId());
+    }
+
+    private static String personalDirectoryName(String username, String userId) {
+        String id = userId.replaceAll("[^a-zA-Z0-9]", "");
+        return username + "-" + id.substring(0, Math.min(8, id.length()));
     }
 
     private static String normalizeRelativePath(String rawPath) {

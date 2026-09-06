@@ -56,7 +56,7 @@ Implementado:
 - exclusão recuperável por meio de uma lixeira interna;
 - bloqueio de travessia de diretórios, links simbólicos e junções.
 
-Neste computador, a pasta base é `D:\backup nuvem`. Essa escolha pertence à instalação local e não é incluída no instalador.
+Cada instalação escolhe sua própria pasta base. O caminho fica salvo somente nas configurações locais e não é incluído no instalador nem no repositório.
 
 ## Aplicativo Windows
 

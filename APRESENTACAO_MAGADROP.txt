@@ -139,9 +139,9 @@ Se o celular não abrir o endereço:
 Para outra pessoa instalar, envie apenas output\MagaDropSetup.exe. O instalador
 não contém contas, senhas ou arquivos deste computador.
 
-Para colaborar no código de um repositório privado, adicione a pessoa em
-Settings > Collaborators > Add people no GitHub. Depois do convite, ela poderá
-clonar a branch codex/v3-contas-sessoes e propor alterações.
+Para colaborar no código, clone a branch principal do repositório público.
+Quem quiser contribuir pode criar um fork e enviar uma pull request. O código
+do MagaDrop é distribuído sob a licença MIT.
 
 Repositório: https://github.com/MagaGabriel/MagaDrop
 

@@ -102,8 +102,6 @@ public class MagaDrop {
     }
 
     static Path pastaPadrao() {
-        Path preferida = Paths.get("D:\\backup nuvem").toAbsolutePath().normalize();
-        if (Files.isDirectory(preferida)) return preferida;
         return Paths.get(System.getProperty("user.home"), "MagaDrop").toAbsolutePath().normalize();
     }
 

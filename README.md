@@ -22,7 +22,7 @@ Pasta base
     └── uma pasta exclusiva para cada conta
 ```
 
-Neste computador, a pasta base usada é `D:\backup nuvem`. Cada instalação feita em outro computador escolhe seu próprio local.
+Cada instalação escolhe sua própria pasta base. O caminho fica salvo somente nas configurações locais e não faz parte do instalador nem do repositório.
 
 ## Como usar
 
@@ -62,7 +62,7 @@ O acesso remoto seguro ainda será um marco futuro, depois da adoção de HTTPS 
 
 Para outra pessoa apenas usar o programa, envie `output\MagaDropSetup.exe`. Contas, senhas e arquivos deste computador não fazem parte do instalador.
 
-Para colaborar no código do repositório privado, adicione a conta da pessoa em **Settings > Collaborators > Add people** no GitHub. Depois do aceite, ela poderá clonar a branch `codex/v3-contas-sessoes`.
+Para colaborar no código, clone a branch principal do repositório público. Quem quiser contribuir pode criar um fork e enviar uma pull request.
 
 Veja também:
 
@@ -99,3 +99,7 @@ Estrutura do repositório:
 - `apresentacao/APRESENTACAO_MAGADROP.pptx`: apresentação editável.
 
 `web/qrcode.min.js` é o QRCode.js 1.0.0, distribuído sob licença MIT. As demais licenças estão em `THIRD_PARTY_LICENSES.md`.
+
+## Licença
+
+O código do MagaDrop é distribuído sob a [licença MIT](LICENSE). Componentes de terceiros permanecem sujeitos às licenças listadas em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

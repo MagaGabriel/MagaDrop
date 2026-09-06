@@ -8,14 +8,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
 /** Servidor descartável para conferir manualmente a interface em desenvolvimento. */
-public class MagaDropPreviewServer {
+public class MagaDropDemoServer {
     public static void main(String[] args) throws Exception {
-        Path temporary = Files.createTempDirectory("magadrop-preview-");
+        Path temporary = Files.createTempDirectory("magadrop-demo-");
         MagaDrop.pastaWeb = Paths.get("web").toAbsolutePath().normalize();
         MagaDrop.pastaUploads = temporary.resolve("uploads");
         Files.createDirectories(MagaDrop.pastaUploads);
         MagaDrop.usuarios = new UserStore(temporary.resolve("data/users.properties"));
-        MagaDrop.usuarios.createInitialAdmin("admin", "Administrador", "Teste seguro 123!");
+        MagaDrop.usuarios.createInitialAdmin("MAGA", "MAGA", "Teste seguro 123!");
         MagaDrop.armazenamento = new StorageService(MagaDrop.pastaUploads, temporary.resolve("data/Pessoal"));
         MagaDrop.sessoes = new SessionManager();
         MagaDrop.tentativasLogin = new LoginRateLimiter();
@@ -39,9 +39,9 @@ public class MagaDropPreviewServer {
         String networkAddress;
         try { networkAddress = "http://" + MagaDrop.descobrirIP() + ":" + server.getAddress().getPort(); }
         catch (Exception e) { networkAddress = "indisponível"; }
-        System.out.println("PREVIEW_URL_LOCAL=http://127.0.0.1:" + server.getAddress().getPort());
-        System.out.println("PREVIEW_URL_NETWORK=" + networkAddress);
-        System.out.println("PREVIEW_LOGIN=admin / Teste seguro 123!");
+        System.out.println("DEMO_URL_LOCAL=http://127.0.0.1:" + server.getAddress().getPort());
+        System.out.println("DEMO_URL_NETWORK=" + networkAddress);
+        System.out.println("DEMO_LOGIN=MAGA / Teste seguro 123!");
         new CountDownLatch(1).await();
     }
 }

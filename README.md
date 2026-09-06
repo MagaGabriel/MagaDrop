@@ -1,48 +1,84 @@
 # MagaDrop
 
-Aplicativo Windows para enviar, organizar e baixar arquivos de celulares e outros dispositivos conectados à mesma rede local.
+O MagaDrop transforma um computador Windows em um servidor de arquivos para a família dentro da rede local. Celulares, tablets e outros computadores acessam pelo navegador, sem instalar aplicativo cliente.
 
-> A branch `codex/v3-contas-sessoes` contém a fundação da versão 3 em desenvolvimento. A versão estável continua preservada na tag e na Release `v2.0.0`.
+## Instalação
+
+O usuário precisa instalar somente `MagaDropSetup.exe`. O instalador já inclui o Java necessário, a interface web, o ícone, os atalhos e o desinstalador.
+
+Na primeira abertura de uma instalação nova:
+
+1. Clique em **Escolher...** e selecione a pasta base.
+2. Crie e confirme a senha do administrador `MAGA`.
+3. Se quiser, marque a opção para iniciar o MagaDrop com o Windows.
+4. Conclua a configuração e aguarde o servidor ficar pronto.
+
+O MagaDrop cria esta estrutura dentro da pasta escolhida:
+
+```text
+Pasta base
+├── Compartilhada
+└── Usuarios
+    └── uma pasta exclusiva para cada conta
+```
+
+Neste computador, a pasta base usada é `D:\backup nuvem`. Cada instalação feita em outro computador escolhe seu próprio local.
 
 ## Como usar
 
-1. Abra o MagaDrop no computador e aguarde o servidor iniciar.
-2. No celular, conectado à mesma rede Wi-Fi, leia o QR code ou abra o endereço exibido.
-3. Entre com o usuário `MAGA` e a senha configurada no aplicativo do computador.
-4. Escolha uma pasta em **Pessoal** ou **Compartilhada** e selecione ou arraste os arquivos. Nomes existentes não são sobrescritos.
-5. Abra **Arquivos** para criar pastas, navegar, baixar itens no celular ou enviá-los para a lixeira.
-6. No Windows, use **Abrir compartilhada** ou **Pastas pessoais** para acessar os arquivos diretamente.
+1. Abra o MagaDrop no computador que armazenará os arquivos.
+2. Conecte o celular e o computador à mesma rede Wi-Fi.
+3. Leia o QR code ou digite no celular o endereço exibido pelo programa.
+4. Entre com `MAGA` ou com uma conta criada pelo administrador.
+5. Escolha **Pessoal** ou **Compartilhada**.
+6. Envie arquivos, crie pastas, navegue ou faça downloads.
 
-Ao fechar a janela no Windows, o MagaDrop continua funcionando na bandeja do sistema. Use **Sair** no ícone da bandeja quando quiser realmente encerrar o servidor.
+Ao fechar a janela, o servidor continua ativo na bandeja do Windows. Use **Sair** no ícone da bandeja para encerrá-lo.
 
-Na primeira execução de uma instalação nova, é obrigatório usar o botão **Escolher...** para selecionar a pasta base onde os arquivos serão salvos. O MagaDrop cria dentro dela as pastas `Compartilhada` e `Usuarios`. A pasta base pode ser alterada depois na janela principal.
+## Recursos atuais
 
-## Compartilhar com outra pessoa
+- contas locais de administrador e membros;
+- pastas pessoais isoladas e uma pasta compartilhada;
+- envio de vários arquivos e arrastar e soltar;
+- criação de pastas, navegação e download pelo navegador;
+- exclusão recuperável em uma lixeira interna;
+- QR code gerado sem depender da internet;
+- porta alternativa automática quando a 8080 estiver ocupada;
+- opção de iniciar junto com o Windows;
+- limite de 2 GB por arquivo e preservação de nomes repetidos.
 
-Para apenas instalar o MagaDrop em outro computador, envie o arquivo `output\MagaDropSetup-v3-preview.exe`. Na primeira abertura, a pessoa escolherá a pasta base dela e criará a senha da conta `MAGA`; seus usuários, senhas e arquivos não são enviados junto com o instalador.
+## Segurança e limite atual
 
-Para a pessoa também colaborar no código de um repositório privado, adicione a conta dela como colaboradora no GitHub em **Settings > Collaborators > Add people**. Depois que ela aceitar o convite, poderá clonar a branch `codex/v3-contas-sessoes` e trabalhar no projeto.
+- As senhas usam PBKDF2-HMAC-SHA-256 com salt aleatório e 600 mil iterações.
+- As sessões usam tokens aleatórios, cookie `HttpOnly`, `SameSite=Strict` e proteção CSRF.
+- O servidor limita tentativas de login e rejeita caminhos, links e nomes perigosos.
+- Downloads e operações de arquivo não recebem caminhos absolutos do Windows.
+- O tráfego atual usa HTTP e deve permanecer em uma rede local confiável.
+- Não exponha a porta do MagaDrop diretamente na internet.
 
-## Fundação de segurança da versão 3
+O acesso remoto seguro ainda será um marco futuro, depois da adoção de HTTPS e autorização de dispositivos.
 
-- A senha da conta é protegida com PBKDF2-HMAC-SHA-256, salt aleatório e 600 mil iterações.
-- A senha legada da versão 2 é migrada para a conta `MAGA` e removida das preferências do Windows.
-- A pasta principal contém `Compartilhada` e `Usuarios`; neste computador, o padrão é `D:\backup nuvem`.
-- O navegador utiliza uma sessão aleatória de 256 bits em cookie `HttpOnly` e `SameSite=Strict`.
-- Operações de escrita exigem também um token contra requisições forjadas (CSRF).
-- Cinco falhas de login consecutivas bloqueiam novas tentativas por um minuto.
-- Sessões expiram após uma hora sem atividade ou doze horas no total.
-- Caminhos e nomes inválidos são rejeitados; o limite por arquivo é 2 GB.
-- Pastas pessoais são vinculadas ao identificador interno da conta e isoladas no servidor.
-- Downloads e operações de arquivo nunca recebem caminhos absolutos do Windows.
-- Exclusões movem arquivos e pastas para uma lixeira interna, permitindo recuperação no computador.
-- O tráfego é HTTP local, sem criptografia. Use uma rede confiável e não exponha a porta escolhida pelo aplicativo à internet.
+## Compartilhar e colaborar
 
-A versão 3 já inclui administração de usuários, pastas pessoais e compartilhadas, explorador de arquivos, escolha do destino dos uploads, criação de pastas, lixeira e downloads. Consulte [V3_DESENVOLVIMENTO.md](V3_DESENVOLVIMENTO.md).
+Para outra pessoa apenas usar o programa, envie `output\MagaDropSetup.exe`. Contas, senhas e arquivos deste computador não fazem parte do instalador.
+
+Para colaborar no código do repositório privado, adicione a conta da pessoa em **Settings > Collaborators > Add people** no GitHub. Depois do aceite, ela poderá clonar a branch `codex/v3-contas-sessoes`.
+
+Veja também:
+
+- [Apresentação do MagaDrop](apresentacao/APRESENTACAO_MAGADROP.pptx)
+- [Estado técnico da versão 3](V3_DESENVOLVIMENTO.md)
 
 ## Desenvolvimento
 
-Requisitos: JDK 25 ou compatível e PowerShell 7.
+Para trabalhar no código, instale:
+
+- Git;
+- JDK 25 ou compatível;
+- PowerShell 7;
+- Inno Setup 6, necessário somente para gerar o instalador.
+
+Comandos principais:
 
 ```powershell
 .\build.ps1
@@ -50,14 +86,16 @@ Requisitos: JDK 25 ou compatível e PowerShell 7.
 .\build.ps1 -Test -Installer
 ```
 
-O script compila as classes, recria `MagaDrop.jar` e atualiza o executável usando `launcher\MagaDropLauncher.bin`. Com `-Installer`, ele também gera `output\MagaDropSetup-v3-preview.exe` usando o Inno Setup 6.
+O último comando compila o aplicativo, executa os testes e gera `output\MagaDropSetup.exe`.
 
-O instalador da prévia usa o nome **MagaDrop 3 Preview**, uma pasta própria em `%LOCALAPPDATA%\Programs\MagaDrop` e atalhos próprios. Isso impede que uma instalação antiga abra por engano e preserva as contas em `%LOCALAPPDATA%\MagaDrop`.
+Estrutura do repositório:
 
-- `src/`: servidor HTTP e interface Java Swing.
-- `web/`: interface responsiva servida aos dispositivos.
-- `web/maga-logo.png`: identidade visual usada no site, na janela e na bandeja do Windows.
-- `tests/`: teste integrado local.
-- `jre/`: runtime Java distribuído com o instalador.
+- `src/`: servidor HTTP e interface Java Swing;
+- `web/`: interface para navegadores;
+- `tests/`: testes integrados e servidor descartável de demonstração;
+- `launcher/`: launcher do executável Windows;
+- `MagaDrop.iss`: configuração do instalador;
+- `APRESENTACAO_MAGADROP.txt`: roteiro atualizado da apresentação;
+- `apresentacao/APRESENTACAO_MAGADROP.pptx`: apresentação editável.
 
-`web/qrcode.min.js` é o QRCode.js 1.0.0, distribuído sob licença MIT.
+`web/qrcode.min.js` é o QRCode.js 1.0.0, distribuído sob licença MIT. As demais licenças estão em `THIRD_PARTY_LICENSES.md`.

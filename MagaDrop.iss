@@ -1,11 +1,11 @@
 [Setup]
 AppId={{2D94447B-C613-46E8-AE35-23DA76DE965B}
 AppName=MagaDrop
-AppVersion=3.0.0-preview.4
-AppVerName=MagaDrop 3 Preview 4
+AppVersion=3.0.0
+AppVerName=MagaDrop
 AppPublisher=MagaDrop
-VersionInfoVersion=3.0.0.4
-VersionInfoProductVersion=3.0.0.4
+VersionInfoVersion=3.0.0.0
+VersionInfoProductVersion=3.0.0.0
 DefaultDirName={localappdata}\Programs\MagaDrop
 DefaultGroupName=MagaDrop
 PrivilegesRequired=lowest
@@ -14,7 +14,7 @@ WizardStyle=modern
 Compression=lzma2
 SolidCompression=yes
 OutputDir=output
-OutputBaseFilename=MagaDropSetup-v3-preview
+OutputBaseFilename=MagaDropSetup
 SetupIconFile=file.ico
 
 [Files]

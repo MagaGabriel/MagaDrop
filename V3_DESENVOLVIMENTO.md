@@ -1,82 +1,84 @@
-# MagaDrop v3 — desenvolvimento
+# MagaDrop 3.0.0
 
 ## Objetivo
 
-Transformar o MagaDrop em um servidor de arquivos familiar seguro dentro da rede local antes de permitir qualquer acesso remoto.
+Transformar o MagaDrop em um servidor de arquivos familiar seguro dentro da rede local antes de habilitar acesso remoto.
 
-## Marco 1: fundação de contas e sessões
+## Contas e sessões
 
-Implementado nesta branch:
+Implementado:
 
-- cadastro local versionado de usuários;
-- perfis `ADMIN` e `MEMBER`;
-- migração automática da senha da versão 2 para a conta `MAGA`;
+- conta administradora principal `MAGA` e contas de membros;
+- cadastro local em `%LOCALAPPDATA%\MagaDrop\users.properties`;
 - senhas protegidas com PBKDF2-HMAC-SHA-256, salt aleatório e 600 mil iterações;
-- sessões aleatórias de 256 bits, mantidas somente na memória do servidor;
+- migração automática da senha antiga para a conta `MAGA`;
+- sessões aleatórias de 256 bits mantidas somente na memória;
 - cookies `HttpOnly` e `SameSite=Strict`;
-- token CSRF exigido em uploads e logout;
-- expiração por inatividade e por tempo máximo;
-- revogação de todas as sessões quando a senha do administrador muda;
-- limitação de tentativas de login por usuário e endereço de origem;
-- login e logout na interface web;
-- upload permitido somente após autenticação;
-- testes integrados do fluxo completo.
+- token CSRF nas operações de escrita;
+- expiração das sessões por inatividade e tempo máximo;
+- limitação de tentativas de login;
+- revogação de sessões após alteração de senha ou desativação da conta.
 
-O cadastro fica em `%LOCALAPPDATA%\MagaDrop\users.properties` e contém apenas identificadores, perfis e hashes de senha. A senha original não é armazenada. O formato possui versão para permitir migração futura para SQLite quando o catálogo, as permissões e o histórico de arquivos forem introduzidos.
+O arquivo de usuários contém identificadores, perfis e hashes. O MagaDrop não armazena a senha original.
 
-## Comportamento ao atualizar da versão 2
+## Administração de usuários
 
-Na primeira abertura da versão 3:
+O administrador pode usar o aplicativo Windows ou a área **Usuários** no navegador para:
 
-1. A pasta de uploads continua sendo utilizada.
-2. A senha configurada na versão 2 é transformada em hash.
-3. É criada a conta `MAGA` com essa senha.
-4. A senha legível é removida das preferências antigas.
+- criar uma conta de membro e sua pasta pessoal;
+- redefinir a senha de um membro;
+- ativar ou desativar uma conta;
+- encerrar as sessões de um membro;
+- excluir uma conta mediante confirmação e senha administrativa.
 
-Se for uma instalação nova, a configuração inicial exige uma senha ou frase-senha entre 10 e 128 caracteres e obriga a escolha explícita da pasta base. Dentro dela, o MagaDrop cria `Compartilhada` e `Usuarios`.
+A conta `MAGA` não pode ser desativada nem excluída. As ações sensíveis exigem novamente a senha do administrador. A exclusão da conta não apaga automaticamente a pasta pessoal, evitando perda acidental de arquivos.
 
-## Marco 2: administração de usuários
+## Armazenamento e arquivos
 
-Implementado:
+Na primeira instalação, a pessoa precisa selecionar explicitamente uma pasta base. O MagaDrop cria dentro dela:
 
-- botão **Usuários** no aplicativo Windows;
-- tabela local com perfil, estado e quantidade de sessões;
-- criação de contas de membro;
-- redefinição segura da senha de membros;
-- ativação e desativação de contas;
-- encerramento remoto das sessões de um membro;
-- exclusão permanente de contas de membro, com confirmação pelo nome e senha atual do administrador;
-- área **Minha conta** para cada pessoa trocar a própria senha;
-- área **Usuários** no navegador, visível somente para administradores;
-- nova autenticação do administrador antes de cada ação sensível;
-- revogação automática de sessões após troca de senha ou desativação;
-- testes que comprovam que membros não acessam a administração.
-
-Senhas atuais e hashes nunca são enviados pela API. O administrador pode somente definir uma nova senha. A conta administradora principal não pode ser desativada nem excluída. Como ainda não existem pastas pessoais, a exclusão atual remove somente a conta; o tratamento dos arquivos será definido junto ao próximo marco.
-
-## Marco 3: armazenamento e arquivos
+```text
+Pasta base
+├── Compartilhada
+└── Usuarios
+    ├── maga-identificador
+    └── usuario-identificador
+```
 
 Implementado:
 
-- raiz pessoal exclusiva por identificador interno de usuário;
-- raiz compartilhada baseada na pasta escolhida no aplicativo Windows;
-- seleção visual do destino antes de enviar arquivos;
-- navegação e listagem de pastas sem expor caminhos absolutos do Windows;
-- criação segura de subpastas;
-- download de arquivos pessoais e compartilhados;
-- exclusão recuperável, movendo itens para uma lixeira interna;
-- bloqueio de travessia de diretório, links simbólicos e junções;
-- testes de isolamento entre contas e de todas as operações de arquivo.
+- área pessoal exclusiva por identificador interno;
+- área compartilhada acessível às contas autorizadas;
+- escolha do destino antes do envio;
+- navegação sem expor caminhos absolutos do computador;
+- criação de subpastas;
+- downloads para celular ou outro computador;
+- exclusão recuperável por meio de uma lixeira interna;
+- bloqueio de travessia de diretórios, links simbólicos e junções.
 
-A pasta principal escolhida no aplicativo contém `Compartilhada` e `Usuarios`. Neste computador, o padrão é `D:\backup nuvem`, portanto os caminhos são `D:\backup nuvem\Compartilhada` e `D:\backup nuvem\Usuarios`. A proteção é aplicada pelo servidor do MagaDrop; contas do próprio Windows com acesso ao disco continuam sujeitas às permissões do sistema operacional.
+Neste computador, a pasta base é `D:\backup nuvem`. Essa escolha pertence à instalação local e não é incluída no instalador.
 
-## Próximo marco
+## Aplicativo Windows
 
-1. Tela de lixeira com restauração de arquivos.
-2. Registro persistente de auditoria.
-3. Dispositivos autorizados e HTTPS.
-4. Acesso externo sem abertura direta da porta do roteador.
+- nome exibido, atalho e entrada do instalador: `MagaDrop`;
+- servidor local iniciado preferencialmente na porta 8080;
+- seleção automática de outra porta quando necessário;
+- QR code e endereço da rede exibidos na janela;
+- execução contínua pela bandeja do sistema;
+- opção de início automático com o Windows;
+- Java Runtime incluído no instalador.
+
+## Testes automatizados
+
+O teste integrado cobre autenticação, usuários, sessões, limite de tentativas, QR code, porta alternativa, isolamento das pastas, criação, download, upload e exclusão segura. A primeira configuração também possui teste para impedir avanço sem escolha explícita da pasta base.
 
 ## Limite atual
 
-Esta branch continua destinada exclusivamente a redes locais confiáveis. O cookie ainda não usa o atributo `Secure` porque o servidor local opera por HTTP. HTTPS, dispositivos autorizados e acesso externo pertencem a um marco posterior, depois que usuários e permissões estiverem estabilizados.
+O MagaDrop opera por HTTP e foi projetado somente para redes locais confiáveis. O cookie ainda não usa `Secure` porque não há HTTPS. A porta do aplicativo não deve ser redirecionada diretamente no roteador.
+
+## Próximos marcos
+
+1. Tela de lixeira com restauração de arquivos.
+2. Registro persistente de auditoria.
+3. HTTPS e autorização de dispositivos.
+4. Acesso externo sem exposição direta da porta do computador.

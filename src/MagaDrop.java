@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.prefs.Preferences;
 
 public class MagaDrop {
-    private static final String VERSAO = "3.0.0-preview.4";
+    private static final String VERSAO = "3.0.0";
     private static final int PORTA_PREFERIDA = 8080;
     private static final long LIMITE_UPLOAD = 2L * 1024 * 1024 * 1024;
     private static final String CHAVE_PASTA_RAIZ = "pastaRaiz";
@@ -180,14 +180,14 @@ public class MagaDrop {
     }
 
     static void criarInterface() {
-        janela = new JFrame("MagaDrop 3 Preview"); janela.setSize(820, 620); janela.setMinimumSize(new Dimension(720, 560));
+        janela = new JFrame("MagaDrop"); janela.setSize(820, 620); janela.setMinimumSize(new Dimension(720, 560));
         janela.setLocationRelativeTo(null);
         janela.setDefaultCloseOperation(SystemTray.isSupported() ? JFrame.HIDE_ON_CLOSE : JFrame.EXIT_ON_CLOSE);
         janela.setLayout(new BorderLayout(12, 12));
 
         JPanel cabecalho = new JPanel(new BorderLayout());
         cabecalho.setBorder(BorderFactory.createEmptyBorder(16, 18, 0, 18));
-        JLabel titulo = new JLabel("MagaDrop 3 Preview"); titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        JLabel titulo = new JLabel("MagaDrop"); titulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titulo.setToolTipText("Versão " + VERSAO);
         JPanel marca = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)); marca.setOpaque(false);
         Path logoPath = pastaWeb.resolve("maga-logo.png");

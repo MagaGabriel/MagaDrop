@@ -4,6 +4,8 @@
 MagaDrop.exe
 MagaDropSetup.exe
 output/
+.codex-presentation-build/
+.codex-finalizer/
 
 # Runtime e arquivos locais
 jre/

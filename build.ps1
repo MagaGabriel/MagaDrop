@@ -31,5 +31,5 @@ if($Installer){
   if(-not $iscc){throw 'Inno Setup 6 não encontrado.'}
   & $iscc (Join-Path $root 'MagaDrop.iss')
   if($LASTEXITCODE -ne 0){throw 'Falha ao gerar o instalador.'}
-  Write-Host 'Instalador concluído:' (Join-Path $root 'output\MagaDropSetup-v3-preview.exe')
+  Write-Host 'Instalador concluído:' (Join-Path $root 'output\MagaDropSetup.exe')
 }

@@ -76,6 +76,7 @@ Para trabalhar no código, instale:
 - Git;
 - JDK 25 ou compatível;
 - PowerShell 7;
+- Launch4j 3.50;
 - Inno Setup 6, necessário somente para gerar o instalador.
 
 Comandos principais:

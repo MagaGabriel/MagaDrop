@@ -1,4 +1,4 @@
-# MagaDrop 3.0.0
+# MagaDrop 3.0.1
 
 ## Objetivo
 
@@ -66,7 +66,7 @@ Cada instalação escolhe sua própria pasta base. O caminho fica salvo somente 
 - QR code e endereço da rede exibidos na janela;
 - execução contínua pela bandeja do sistema;
 - opção de início automático com o Windows;
-- Java Runtime incluído no instalador.
+- Java Runtime incluído no instalador e selecionado diretamente pelo launcher, sem exigir Java instalado no Windows.
 
 ## Testes automatizados
 

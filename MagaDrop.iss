@@ -1,11 +1,11 @@
 [Setup]
 AppId={{2D94447B-C613-46E8-AE35-23DA76DE965B}
 AppName=MagaDrop
-AppVersion=3.0.0
+AppVersion=3.0.1
 AppVerName=MagaDrop
 AppPublisher=MagaDrop
-VersionInfoVersion=3.0.0.0
-VersionInfoProductVersion=3.0.0.0
+VersionInfoVersion=3.0.1.0
+VersionInfoProductVersion=3.0.1.0
 DefaultDirName={localappdata}\Programs\MagaDrop
 DefaultGroupName=MagaDrop
 PrivilegesRequired=lowest
